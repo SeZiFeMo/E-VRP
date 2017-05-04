@@ -5,7 +5,7 @@
     University of Modena and Reggio Emilia; it is about the routing of
     a fleet of electrical vehicles.
 
-    Copyright (C) 2017  Serena Ziviani & Federico Motta
+    Copyright (C) 2017  Serena Ziviani, Federico Motta
 
     This file is part of E-VRP.
 
@@ -22,10 +22,13 @@
     You should have received a copy of the GNU General Public License
     along with E-VRP.  If not, see <http://www.gnu.org/licenses/>.
 """
+__author__ = "Federico Motta, Serena Ziviani"
+__license__ = "GPL3"
 
 import argparse
 import IO
 import sys
+
 
 # ------------------------------ SCRIPT LOADED ------------------------------ #
 if __name__ == '__main__':
@@ -47,7 +50,7 @@ class CLI(object):
 
     _args = None
     _description = "E-VPR "                                                   \
-        "Copyright (C) 2017 Serena Ziviani & Federico Motta\n"                \
+        "Copyright (C) 2017 Serena Ziviani, Federico Motta\n"                \
         "This program comes with ABSOLUTELY NO WARRANTY.\n"                   \
         "This is free software, and you are welcome to redistribute it\n"     \
         "under certain conditions; read LICENSE file for more details.\n"

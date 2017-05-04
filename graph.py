@@ -5,7 +5,7 @@
     University of Modena and Reggio Emilia; it is about the routing of
     a fleet of electrical vehicles.
 
-    Copyright (C) 2017  Serena Ziviani & Federico Motta
+    Copyright (C) 2017  Serena Ziviani, Federico Motta
 
     This file is part of E-VRP.
 
@@ -23,11 +23,15 @@
     along with E-VRP.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+__author__ = "Federico Motta, Serena Ziviani"
+__license__ = "GPL3"
+
 import IO
 import matplotlib.pyplot as plt
 import networkx as nx
 import utility
 import warnings
+
 
 # -------------------------------- SCRIPT RUN ------------------------------- #
 if __name__ != '__main__':

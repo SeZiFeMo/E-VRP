@@ -1,6 +1,9 @@
 #!/usr/bin/env python3
 # coding: utf-8
 
+__author__ = "Federico Motta, Serena Ziviani"
+__license__ = "GPL3"
+
 import IO
 import matplotlib.pyplot as plt
 import networkx as nx

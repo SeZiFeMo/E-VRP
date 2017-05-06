@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 # coding: utf-8
 
-""" E-VPR is a software developed for the Operational Research exam at
-    University of Modena and Reggio Emilia; it is about the routing of
-    a fleet of electrical vehicles.
+""" E-VRP is a project about the routing of a fleet of electrical vehicles.
+
+    E-VRP is a project developed for the Application of Operational Research
+    exam at University of Modena and Reggio Emilia.
 
     Copyright (C) 2017  Serena Ziviani, Federico Motta
 
@@ -12,7 +13,7 @@
     E-VRP is free software: you can redistribute it and/or modify
     it under the terms of the GNU General Public License as published by
     the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+    any later version.
 
     E-VRP is distributed in the hope that it will be useful,
     but WITHOUT ANY WARRANTY; without even the implied warranty of
@@ -22,12 +23,20 @@
     You should have received a copy of the GNU General Public License
     along with E-VRP.  If not, see <http://www.gnu.org/licenses/>.
 """
-__author__ = "Federico Motta, Serena Ziviani"
-__license__ = "GPL3"
 
 import logging
-import utility
 import yaml
+
+import utility
+
+__authors__ = "Serena Ziviani, Federico Motta"
+__copyright__ = "E-VRP  Copyright (C)  2017"
+__license__ = "GPL3"
+
+# ------------------------------ SCRIPT LOADED ------------------------------ #
+if __name__ == '__main__':
+    IO.Log.warning('Please do not run that script, load it!')
+    exit(1)
 
 
 class Log(object):

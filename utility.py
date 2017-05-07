@@ -97,5 +97,5 @@ class CLI(object):
             CLI._args = parser.parse_args()
 
             # When program starts print license header
-            print(CLI._description)
+            print(CLI._epilog.partition('\nREQUIREMENTS')[0])
         return CLI._args

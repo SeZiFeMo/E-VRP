@@ -24,6 +24,23 @@
     along with E-VRP.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+__authors__ = "Serena Ziviani, Federico Motta"
+__copyright__ = "E-VRP  Copyright (C)  2017"
+__license__ = "GPL3"
+
+# -------------------------------- SCRIPT RUN ------------------------------- #
+if __name__ != '__main__':
+    print('Please do not load that script, run it!')
+    exit(1)
+
+# Add to the following loop every external library used!
+for lib in ('matplotlib.pyplot as plt', 'networkx as n', 'yaml'):
+    try:
+        exec('import ' + str(lib))
+    except ImportError:
+        print('Could not import {} library, please install it!'.format(lib))
+        exit(1)
+
 import matplotlib.pyplot as plt
 import networkx as nx
 import warnings
@@ -31,32 +48,28 @@ import warnings
 import IO
 import utility
 
-__authors__ = "Serena Ziviani, Federico Motta"
-__copyright__ = "E-VRP  Copyright (C)  2017"
-__license__ = "GPL3"
-
-# -------------------------------- SCRIPT RUN ------------------------------- #
-if __name__ != '__main__':
-    IO.Log.warning('Please do not load that script, run it!')
-    exit(1)
-
-
 utility.check_python_version()
 
-# Add to the following loop every external library used!
-for lib in ('matplotlib.pyplot as plt', 'networkx as n', 'yaml'):
-    try:
-        exec('import ' + str(lib))
-    except ImportError:
-        IO.warning('Could not import {} library, '
-                   'please install it!'.format(lib))
-        exit(1)
+graph = nx.read_shp(path=utility.CLI.args().input_file, simplify=True)
+IO.Log.info("Type of graph: " + str(type(graph)))
 
-Graph = nx.read_shp(path=utility.CLI.args().input_file, simplify=True)
 with warnings.catch_warnings():
     warnings.filterwarnings("ignore", category=UserWarning)
-    nx.draw(Graph)
-plt.show()
-nx.write_shp(Graph, 'output_test')
+#    nx.draw(graph)
+# plt.show()
 
-# IO.Log.info('EDGES', [d for e in nx.read_shp(utility.CLI.args().input_file).edge.values() for d in e.values()])
+for from_lon, from_lat in graph.edge:
+    for to_lon, to_lat in graph.edge[(from_lon, from_lat)]:
+        if graph.edge[(from_lon, from_lat)][(to_lon, to_lat)]['fclass'] \
+           in ('living_street', 'motorway', 'motorway_link', 'primary',
+               'primary_link', 'residential', 'secondary', 'tertiary',
+               'unclassified'):
+            print("\nFROM LON: {}, LAT: {}\tTO LON: {}, LAT {}".format(
+                    from_lon, from_lat, to_lon, to_lat))
+            for tag in graph.edge[(from_lon, from_lat)][(to_lon, to_lat)]:
+                if tag not in ('lastchange', 'ShpName', 'Wkb', 'Wkt', 'Json'):
+                    print(tag + ': ' + repr(graph.edge[(from_lon,
+                                                    from_lat)][(to_lon,
+                                                                to_lat)][tag]))
+
+# nx.write_shp(graph, 'output_test')

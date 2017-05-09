@@ -80,9 +80,16 @@ class CLI(object):
 #                                help='Text_shown_in_help',
 #                                metavar='Value_printed_in_help_next_to_aa',
 #                                type=str)  # Data type
-            parser.add_argument('-i', '--input',
-                                dest='input_file',
-                                help='shapefile to build initial graph',
+            parser.add_argument('-a', '--altitude',
+                                default='ASTGTM2_de',
+                                dest='altitude',
+                                help='tag describing the elevation of nodes '
+                                     'in node.shp (default=ASTGTM2_de)',
+                                metavar='tag',
+                                type=str)
+            parser.add_argument('-i', '--import',
+                                dest='import_file',
+                                help='import shapefile to workspace',
                                 metavar='file.shp',
                                 type=str)
             group.add_argument('-q', '--quiet',
@@ -94,6 +101,12 @@ class CLI(object):
                                action='store_true',
                                help='set logging to DEBUG '
                                     '(default level is INFO)')
+            parser.add_argument('-w', '--workspace',
+                                dest='workspace',
+                                help='directory with edges.shp and node.shp '
+                                     '(with elevation information)',
+                                metavar='dir',
+                                type=str)
             CLI._args = parser.parse_args()
 
             # When program starts print license header

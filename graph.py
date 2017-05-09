@@ -41,8 +41,10 @@ for lib in ('matplotlib.pyplot as plt', 'networkx as n', 'yaml'):
         print('Could not import {} library, please install it!'.format(lib))
         exit(1)
 
+import math
 import matplotlib.pyplot as plt
 import networkx as nx
+import os
 import warnings
 
 import IO
@@ -50,26 +52,125 @@ import utility
 
 utility.check_python_version()
 
-graph = nx.read_shp(path=utility.CLI.args().input_file, simplify=True)
-IO.Log.info("Type of graph: " + str(type(graph)))
 
-with warnings.catch_warnings():
-    warnings.filterwarnings("ignore", category=UserWarning)
-#    nx.draw(graph)
-# plt.show()
+def add_slope_to_edge_properties(graph):
+    """Compute edges' slope in radians from node distance and altitude."""
+    h = utility.CLI.args().altitude
+    # from node (x1, y1)
+    for x1, y1 in graph.edge:
+        # to node (x2, y2)
+        for x2, y2 in graph.edge[(x1, y1)]:
+            rise = graph.node[(x2, y2)][h] - graph.node[(x1, y1)][h]
+            run = math.hypot(x2 - x1, y2 - y1)
+            slope = math.atan2(rise, run)
+            graph.edge[(x1, y1)][(x2, y2)]['slope'] = slope
 
-for from_lon, from_lat in graph.edge:
-    for to_lon, to_lat in graph.edge[(from_lon, from_lat)]:
-        if graph.edge[(from_lon, from_lat)][(to_lon, to_lat)]['fclass'] \
-           in ('living_street', 'motorway', 'motorway_link', 'primary',
-               'primary_link', 'residential', 'secondary', 'tertiary',
-               'unclassified'):
-            print("\nFROM LON: {}, LAT: {}\tTO LON: {}, LAT {}".format(
-                    from_lon, from_lat, to_lon, to_lat))
-            for tag in graph.edge[(from_lon, from_lat)][(to_lon, to_lat)]:
-                if tag not in ('lastchange', 'ShpName', 'Wkb', 'Wkt', 'Json'):
-                    print(tag + ': ' + repr(graph.edge[(from_lon,
-                                                    from_lat)][(to_lon,
-                                                                to_lat)][tag]))
 
-# nx.write_shp(graph, 'output_test')
+def check_workspace():
+    """Ensure workspace exist and it contains only necessary files."""
+    ws = utility.CLI.args().workspace
+    if not os.path.isdir(ws):
+        IO.Log.warning('Directory not found ({})'.format(ws))
+        IO.Log.warning('Please set a correct workspace')
+        exit(1)
+
+    if not os.path.isfile(os.path.join(ws, 'edges.shp')):
+        IO.Log.warning('edges.shp not found in workspace ({})'.format(ws))
+        exit(1)
+
+    if not os.path.isfile(os.path.join(ws, 'nodes.shp')):
+        IO.Log.warning('nodes.shp not found in workspace ({})'.format(ws))
+        exit(1)
+
+    graph_read = nx.read_shp(path=os.path.join(ws, 'nodes.shp'), simplify=True)
+
+    # check each node has an altitude attribute
+    altitude = utility.CLI.args().altitude
+    for lon, lat in graph_read.node:
+        if altitude not in graph_read.node[(lon, lat)]:
+            IO.Log.warning('Could not find {} attribute in '
+                           'nodes.shp'.format(altitude))
+            exit(1)
+
+        # check each altitude attribute is a floating point number
+        if not isinstance(graph_read.node[(lon, lat)][altitude], float):
+            IO.Log.warning('Altitude of node lat: {}, lon {} is not a '
+                           'float'.format(lon, lat))
+            exit(1)
+
+    for f in os.listdir(ws):
+        if f not in [prefix + suffix
+                     for prefix in ('nodes.', 'edges.')
+                     for suffix in ('dbf', 'shp', 'shx')]:
+            IO.Log.warning('Please remove {}'.format(os.path.join(ws, f)))
+            exit(1)
+
+
+def draw(graph):
+    """Wrap networkx draw function and suppress its warnings."""
+    with warnings.catch_warnings():
+        warnings.filterwarnings('ignore', category=UserWarning)
+        nx.draw(graph)
+    plt.show()
+
+
+def import_shapefile_to_workspace():
+    """Populate workspace with translation of import_shapefile into a graph."""
+    import_file = utility.CLI.args().import_file
+    ws = utility.CLI.args().workspace
+
+    imported_graph = nx.read_shp(path=import_file, simplify=True)
+    IO.Log.info('File {} imported correctly'.format(import_file))
+
+    if not ws:
+        IO.Log.warning('Please set workspace dir')
+        exit(1)
+
+    nx.write_shp(imported_graph, ws)
+    IO.Log.info('Exported correctly to {} nodes.shp and '
+                'edges.shp\n'.format(ws))
+    IO.Log.info('PLEASE ADD TO {} ELEVATION '
+                'INFORMATION !'.format(os.path.join(ws, 'nodes.shp')))
+    exit(0)
+
+
+def print_edge_properties(graph, fclass_whitelist=None, tag_blacklist=None):
+    """For each edge matching the whitelist print tags not in the blacklist."""
+    if fclass_whitelist is None:
+        fclass_whitelist = ('living_street', 'motorway', 'motorway_link',
+                            'primary', 'primary_link', 'residential',
+                            'secondary', 'tertiary', 'unclassified')
+    if tag_blacklist is None:
+        tag_blacklist = ('code', 'lastchange', 'layer', 'ete', 'ShpName',
+                         'Wkb', 'Wkt', 'Json')
+
+    # from node (x1, y1)
+    for x1, y1 in graph.edge:
+        # to node (x2, y2)
+        for x2, y2 in graph.edge[(x1, y1)]:
+            if graph.edge[(x1, y1)][(x2, y2)]['fclass'] in fclass_whitelist:
+                print('\nLon: {}, Lat: {}  ~>'
+                      '  Lon: {}, Lat {}'.format(x1, y1, x2, y2))
+                for tag in sorted(graph.edge[(x1, y1)][(x2, y2)]):
+                    if tag not in tag_blacklist:
+                        value = graph.edge[(x1, y1)][(x2, y2)][tag]
+                        print('{}: {}'.format(tag, value))
+
+
+# ----------------------------------- MAIN ---------------------------------- #
+
+if utility.CLI.args().import_file:
+    import_shapefile_to_workspace()  # <-- it always exits
+
+if utility.CLI.args().workspace is None:
+    print('\nFirst of all import a shapefile (-i option) to a workspace '
+          'directory (-w option)\n\n'
+          'Then run the program specifing the workspace to use '
+          '(with -w option)')
+    exit(0)
+
+check_workspace()  # <-- it exits if workspace is not compliant
+
+g = nx.read_shp(path=utility.CLI.args().workspace, simplify=True)
+add_slope_to_edge_properties(g)
+print_edge_properties(g)

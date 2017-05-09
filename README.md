@@ -6,14 +6,16 @@ at University of Modena and Reggio Emilia.
 
 # Usage
 ```
-graph.py [-h] [-i file] [-q | -v]
+graph.py [-h] [-a tag] [-i file.shp] [-q | -v] [-w dir]
 
 optional arguments:
-  -h, --help           show this help message and exit
-  -i file.shp, --input file.shp
-                       Shapefile to build initial graph
-  -q, --quiet          Set logging to WARNING, ERROR or CRITICAL (-q|-qq|-qqq)
-  -v, --verbose        Set logging to DEBUG (default level is INFO)
+  -h, --help                        show this help message and exit
+  -a tag, --altitude tag            tag describing the elevation of nodes in node.shp (default=ASTGTM2_de)
+  -i file.shp, --import file.shp    import shapefile to workspace
+  -q, --quiet                       set logging to WARNING, ERROR or CRITICAL (-q|-qq|-qqq)
+  -v, --verbose                     set logging to DEBUG (default level is INFO)
+  -w dir, --workspace dir           directory with edges.shp and node.shp (with elevation information)
+
 ```
 # License
 

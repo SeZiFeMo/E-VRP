@@ -55,15 +55,15 @@ utility.check_python_version()
 
 def add_slope_to_edge_properties(graph):
     """Compute edges' slope in radians from node distance and altitude."""
-    h = utility.CLI.args().altitude
-    # from node (x1, y1)
-    for x1, y1 in graph.edge:
-        # to node (x2, y2)
-        for x2, y2 in graph.edge[(x1, y1)]:
-            rise = graph.node[(x2, y2)][h] - graph.node[(x1, y1)][h]
+    altitude = utility.CLI.args().altitude
+    for node1, adjacency_dict in graph.adjacency_iter():  # fastest iterator
+        for node2 in adjacency_dict:
+            rise = graph.node[node2][altitude] - graph.node[node1][altitude]
+            x1, y1 = node1  # from
+            x2, y2 = node2  # to
             run = math.hypot(x2 - x1, y2 - y1)
             slope = math.atan2(rise, run)
-            graph.edge[(x1, y1)][(x2, y2)]['slope'] = slope
+            graph.add_edge(node1, node2, attr_dict={'slope':  slope})
 
 
 def check_workspace():
@@ -86,16 +86,16 @@ def check_workspace():
 
     # check each node has an altitude attribute
     altitude = utility.CLI.args().altitude
-    for lon, lat in graph_read.node:
-        if altitude not in graph_read.node[(lon, lat)]:
+    for node, data in graph_read.nodes_iter(data=True):  # fastest iterator
+        if altitude not in data:
             IO.Log.warning('Could not find {} attribute in '
                            'nodes.shp'.format(altitude))
             exit(1)
 
         # check each altitude attribute is a floating point number
-        if not isinstance(graph_read.node[(lon, lat)][altitude], float):
+        if not isinstance(data[altitude], float):
             IO.Log.warning('Altitude of node lat: {}, lon {} is not a '
-                           'float'.format(lon, lat))
+                           'float'.format(*node))
             exit(1)
 
     for f in os.listdir(ws):
@@ -112,6 +112,40 @@ def draw(graph):
         warnings.filterwarnings('ignore', category=UserWarning)
         nx.draw(graph)
     plt.show()
+
+
+def get_abstract_graph(graph):
+    """Create a copy of the graph without unnecessary attributes."""
+    necessary_edge_attr = ('length', 'oneway', 'osm_id', 'slope', 'speed')
+    altitude = utility.CLI.args().altitude
+    ret = nx.DiGraph()
+
+    for node, data in graph.nodes_iter(data=True):  # fastest iterator
+        ret.add_node(node, altitude=data[altitude],
+                     longitude=node[0], latitude=node[1])
+
+    for node1, adjacency_dict in graph.adjacency_iter():  # fastest iterator
+        for node2, data in adjacency_dict.items():
+            if not all(tag in data for tag in necessary_edge_attr):
+                continue
+
+            attr = dict()
+            attr['length'] = data['length']
+            attr['osm_id'] = data['osm_id']
+            attr['slope'] = data['slope']
+            if data['speed'] > 0:
+                attr['speed'] = data['speed']
+            elif 'maxspeed' in data and data['maxspeed'] > 0:
+                attr['speed'] = data['maxspeed']
+            else:
+                attr['speed'] = 50  # default value if no speed available
+
+            ret.add_edge(node1, node2, attr_dict=attr)
+            if not data['oneway']:
+                attr['slope'] *= -1
+                ret.add_edge(node2, node1, attr_dict=attr)
+
+    return ret
 
 
 def import_shapefile_to_workspace():
@@ -144,17 +178,14 @@ def print_edge_properties(graph, fclass_whitelist=None, tag_blacklist=None):
         tag_blacklist = ('code', 'lastchange', 'layer', 'ete', 'ShpName',
                          'Wkb', 'Wkt', 'Json')
 
-    # from node (x1, y1)
-    for x1, y1 in graph.edge:
-        # to node (x2, y2)
-        for x2, y2 in graph.edge[(x1, y1)]:
-            if graph.edge[(x1, y1)][(x2, y2)]['fclass'] in fclass_whitelist:
+    for node1, adjacency_dict in graph.adjacency_iter():  # fastest iterator
+        for node2, data in adjacency_dict.items():
+            if 'fclass' not in data or data['fclass'] in fclass_whitelist:
                 print('\nLon: {}, Lat: {}  ~>'
-                      '  Lon: {}, Lat {}'.format(x1, y1, x2, y2))
-                for tag in sorted(graph.edge[(x1, y1)][(x2, y2)]):
+                      '  Lon: {}, Lat: {}'.format(*node1, *node2))
+                for tag in sorted(data):
                     if tag not in tag_blacklist:
-                        value = graph.edge[(x1, y1)][(x2, y2)][tag]
-                        print('{}: {}'.format(tag, value))
+                        print('{}: {}'.format(tag, data[tag]))
 
 
 # ----------------------------------- MAIN ---------------------------------- #
@@ -174,3 +205,8 @@ check_workspace()  # <-- it exits if workspace is not compliant
 g = nx.read_shp(path=utility.CLI.args().workspace, simplify=True)
 add_slope_to_edge_properties(g)
 print_edge_properties(g)
+
+print('\n' + '#' * 80)
+
+abstract_g = get_abstract_graph(g)
+print_edge_properties(abstract_g)

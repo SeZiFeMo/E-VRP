@@ -45,6 +45,7 @@ import math
 import matplotlib.pyplot as plt
 import networkx as nx
 import os
+import random
 import warnings
 
 import IO
@@ -182,7 +183,8 @@ def print_edge_properties(graph, fclass_whitelist=None, tag_blacklist=None):
         for node2, data in adjacency_dict.items():
             if 'fclass' not in data or data['fclass'] in fclass_whitelist:
                 print('\nLon: {}, Lat: {}  ~>'
-                      '  Lon: {}, Lat: {}'.format(*node1, *node2))
+                      '  Lon: {}, Lat: {}'.format(node1[0], node1[1],
+                                                  node2[0], node2[1]))
                 for tag in sorted(data):
                     if tag not in tag_blacklist:
                         print('{}: {}'.format(tag, data[tag]))
@@ -204,9 +206,55 @@ check_workspace()  # <-- it exits if workspace is not compliant
 
 g = nx.read_shp(path=utility.CLI.args().workspace, simplify=True)
 add_slope_to_edge_properties(g)
-print_edge_properties(g)
-
-print('\n' + '#' * 80)
-
 abstract_g = get_abstract_graph(g)
-print_edge_properties(abstract_g)
+
+
+
+
+customers, ref_stations, depot = 50, 10, 1 # overall nodes are 253
+
+for elem in abstract_g.node:
+    abstract_g.node[elem]['type'] = ''
+
+i = 0
+while i < customers:
+    k = random.choice(list(abstract_g.node))
+    elem = abstract_g.node[k]
+    if 'type' in elem and elem['type'] not in ('customer', 'station', 'depot'):
+        elem['type'] = 'customer'
+        i += 1
+j = 0
+while j < ref_stations:
+    k = random.choice(list(abstract_g.node))
+    elem = abstract_g.node[k]
+    if 'type' in elem and elem['type'] not in ('customer', 'station', 'depot'):
+        elem['type'] = 'station'
+        j += 1
+while True:
+    k = random.choice(list(abstract_g.node))
+    elem = abstract_g.node[k]
+    if 'type' in elem and elem['type'] not in ('customer', 'station', 'depot'):
+        elem['type'] = 'depot'
+        break
+
+dijkstra_graph = nx.DiGraph()
+for coor1 in list(abstract_g.node):
+    if abstract_g.node[coor1]['type'] != '':
+        for coor2 in list(abstract_g.node):
+            if abstract_g.node[coor2]['type'] != '':
+                try:
+                    path = nx.shortest_path(abstract_g, coor1, coor2, 'length')
+                except nx.exception.NetworkXNoPath:
+                    continue
+                else:
+                    weight = nx.shortest_path_length(abstract_g, coor1, coor2, 'length')
+                    dijkstra_graph.add_edge(coor1, coor2,
+                                            {'cost': float(weight)})
+
+
+
+
+
+IO.Log.info('', dijkstra_graph.node)
+print('\n' + '#' * 80)
+print_edge_properties(dijkstra_graph)

@@ -97,8 +97,8 @@ def check_problem_solvability(graph):
             IO.Log.warning('No customer or depot reachable from '
                            'refueling station {}'.format(stat))
 
-#    if quit:           # TODO UNCOMMENT
-#        exit(1)        # TODO UNCOMMENT
+    if quit:
+        exit(1)
 
 
 def check_workspace():
@@ -398,7 +398,6 @@ for coor1, data1 in abstract_g.nodes_iter(data=True):
                                                                     coor2)})
                 except:
                     pass
-
 
 print('\n' + '#' * 80)
 print_edge_properties(dijkstra_graph)

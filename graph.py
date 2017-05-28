@@ -34,7 +34,7 @@ if __name__ != '__main__':
     exit(1)
 
 # Add to the following loop every external library used!
-for lib in ('matplotlib.pyplot as plt', 'networkx as n', 'yaml'):
+for lib in ('matplotlib.pyplot as plt', 'networkx as nx', 'yaml'):
     try:
         exec('import ' + str(lib))
     except ImportError:
@@ -47,6 +47,7 @@ import networkx as nx
 import os
 import random
 import warnings
+import yaml
 
 import IO
 import utility
@@ -89,7 +90,7 @@ def check_workspace():
     altitude = utility.CLI.args().altitude
     for node, data in graph_read.nodes_iter(data=True):  # fastest iterator
         if altitude not in data:
-            IO.Log.warning('Could not find {} attribute in '
+            IO.Log.warning('Could not find \'{}\' attribute in '
                            'nodes.shp'.format(altitude))
             exit(1)
 
@@ -103,7 +104,7 @@ def check_workspace():
         if f not in [prefix + suffix
                      for prefix in ('nodes.', 'edges.')
                      for suffix in ('dbf', 'shp', 'shx')]:
-            IO.Log.warning('Please remove {}'.format(os.path.join(ws, f)))
+            IO.Log.warning('Please remove \'{}\''.format(os.path.join(ws, f)))
             exit(1)
 
 
@@ -113,6 +114,46 @@ def draw(graph):
         warnings.filterwarnings('ignore', category=UserWarning)
         nx.draw(graph)
     plt.show()
+
+
+def export_problem_to_directory():
+    """Populate directory with a shapefile representation of the problem."""
+    export_dir = utility.CLI.args().export_dir
+    problem_file = utility.CLI.args().problem_file
+
+    if not os.path.isfile(problem_file):
+        IO.Log.warning('Problem file not found ({})'.format(problem_file))
+        exit(1)
+
+    if not os.path.isdir(export_dir):
+        os.makedirs(export_dir)
+
+    with open(problem_file, 'r') as f:
+        problem = yaml.load(f)
+
+    temp_graph = nx.DiGraph()
+    temp_graph.add_node((problem['depot']['latitude'],
+                         problem['depot']['longitude']))
+    nx.write_shp(temp_graph, os.path.join(export_dir, 'depot.shp'))
+
+    temp_graph = nx.DiGraph()
+    for node in problem['customers']:
+        temp_graph.add_node((node['latitude'],
+                             node['longitude']))
+    nx.write_shp(temp_graph, os.path.join(export_dir, 'customers.shp'))
+
+    temp_graph = nx.DiGraph()
+    for node in problem['stations']:
+        temp_graph.add_node((node['latitude'],
+                             node['longitude']))
+    nx.write_shp(temp_graph, os.path.join(export_dir, 'stations.shp'))
+
+    for ext in ('dbf', 'shp', 'shx'):
+        os.remove(os.path.join(export_dir, 'edges.' + ext))
+
+    IO.Log.info('Exported correctly to \'{}\' depot.shp, customers.shp and '
+                'stations.shp\n'.format(export_dir))
+    exit(0)
 
 
 def get_abstract_graph(graph):
@@ -155,16 +196,16 @@ def import_shapefile_to_workspace():
     ws = utility.CLI.args().workspace
 
     imported_graph = nx.read_shp(path=import_file, simplify=True)
-    IO.Log.info('File {} imported correctly'.format(import_file))
+    IO.Log.info('File \'{}\' imported correctly'.format(import_file))
 
     if not ws:
         IO.Log.warning('Please set workspace dir')
         exit(1)
 
     nx.write_shp(imported_graph, ws)
-    IO.Log.info('Exported correctly to {} nodes.shp and '
+    IO.Log.info('Exported correctly to \'{}\' nodes.shp and '
                 'edges.shp\n'.format(ws))
-    IO.Log.info('PLEASE ADD TO {} ELEVATION '
+    IO.Log.info('PLEASE ADD TO \'{}\' ELEVATION '
                 'INFORMATION !'.format(os.path.join(ws, 'nodes.shp')))
     exit(0)
 
@@ -194,6 +235,9 @@ def print_edge_properties(graph, fclass_whitelist=None, tag_blacklist=None):
 
 if utility.CLI.args().import_file:
     import_shapefile_to_workspace()  # <-- it always exits
+
+if utility.CLI.args().export_dir:
+    export_problem_to_directory()  # <-- it always exits
 
 if utility.CLI.args().workspace is None:
     print('\nFirst of all import a shapefile (-i option) to a workspace '

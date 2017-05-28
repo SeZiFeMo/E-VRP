@@ -87,10 +87,23 @@ class CLI(object):
                                      'in node.shp (default=ASTGTM2_de)',
                                 metavar='tag',
                                 type=str)
+            parser.add_argument('-e', '--export',
+                                dest='export_dir',
+                                help='export to directory a shapefile '
+                                     'representation of the problem to solve',
+                                metavar='dir',
+                                type=str)
             parser.add_argument('-i', '--import',
                                 dest='import_file',
                                 help='import shapefile to workspace',
                                 metavar='file.shp',
+                                type=str)
+            parser.add_argument('-s', '--solve',
+                                default='problem.yaml',
+                                dest='problem_file',
+                                help='solve the problem described in file '
+                                     '(default=problem.yaml)',
+                                metavar='file.yaml',
                                 type=str)
             group.add_argument('-q', '--quiet',
                                action='count',

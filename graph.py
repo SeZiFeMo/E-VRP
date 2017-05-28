@@ -45,7 +45,6 @@ import math
 import matplotlib.pyplot as plt
 import networkx as nx
 import os
-import random
 import warnings
 import yaml
 
@@ -58,7 +57,7 @@ utility.check_python_version()
 def add_slope_to_edge_properties(graph):
     """Compute edges' slope in radians from node distance and altitude."""
     altitude = utility.CLI.args().altitude
-    for node1, adjacency_dict in graph.adjacency_iter():  # fastest iterator
+    for node1, adjacency_dict in graph.adjacency_iter():
         for node2 in adjacency_dict:
             rise = graph.node[node2][altitude] - graph.node[node1][altitude]
             x1, y1 = node1  # from
@@ -71,7 +70,7 @@ def add_slope_to_edge_properties(graph):
 def check_problem_solvability(graph):
     """Test if customers and stations are reachable from depot."""
     depot, customers, stations = None, list(), list()
-    for node, data in graph.nodes_iter(data=True):  # fastest iterator
+    for node, data in graph.nodes_iter(data=True):
         if data['type'] == 'depot':
             depot = node
         elif data['type'] == 'customer':
@@ -91,15 +90,15 @@ def check_problem_solvability(graph):
             quit = True
 
     for stat in stations:
-        if not any(nx.has_path(graph, src, stat) for src in [depot]+customers):
+        if not any(nx.has_path(graph, x, stat) for x in [depot] + customers):
             IO.Log.warning('Refueling station {} is not reachable from any '
                            'customer or depot'.format(stat))
-        if not any(nx.has_path(graph, stat, dst) for dst in [depot]+customers):
+        if not any(nx.has_path(graph, stat, x) for x in [depot] + customers):
             IO.Log.warning('No customer or depot reachable from '
                            'refueling station {}'.format(stat))
 
-    if quit:
-        exit(1)
+#    if quit:           # TODO UNCOMMENT
+#        exit(1)        # TODO UNCOMMENT
 
 
 def check_workspace():
@@ -122,7 +121,7 @@ def check_workspace():
 
     # check each node has an altitude attribute
     altitude = utility.CLI.args().altitude
-    for node, data in graph_read.nodes_iter(data=True):  # fastest iterator
+    for node, data in graph_read.nodes_iter(data=True):
         if altitude not in data:
             IO.Log.warning('Could not find \'{}\' attribute in '
                            'nodes.shp'.format(altitude))
@@ -196,11 +195,11 @@ def get_abstract_graph(graph):
     altitude = utility.CLI.args().altitude
     ret = nx.DiGraph()
 
-    for node, data in graph.nodes_iter(data=True):  # fastest iterator
+    for node, data in graph.nodes_iter(data=True):
         ret.add_node(node, altitude=data[altitude], type=data['type'],
                      longitude=node[0], latitude=node[1])
 
-    for node1, adjacency_dict in graph.adjacency_iter():  # fastest iterator
+    for node1, adjacency_dict in graph.adjacency_iter():
         for node2, data in adjacency_dict.items():
             if not all(tag in data for tag in necessary_edge_attr):
                 continue
@@ -257,7 +256,7 @@ def label_nodes(graph):
 
     already_labeled_nodes = list()
     depot_coor = (problem['depot']['latitude'], problem['depot']['longitude'])
-    if depot_coor not in graph.node:
+    if depot_coor not in graph.nodes_iter():
         IO.Log.warning('Could not find depot {} in '
                        ' workspace'.format(depot_coor))
         exit(1)
@@ -266,7 +265,7 @@ def label_nodes(graph):
 
     for node in problem['customers']:
         cust_coor = (node['latitude'], node['longitude'])
-        if cust_coor not in graph.node:
+        if cust_coor not in graph.nodes_iter():
             IO.Log.warning('Could not find customer {} in '
                            ' workspace'.format(cust_coor))
             exit(1)
@@ -279,7 +278,7 @@ def label_nodes(graph):
 
     for node in problem['stations']:
         station_coor = (node['latitude'], node['longitude'])
-        if station_coor not in graph.node:
+        if station_coor not in graph.nodes_iter():
             IO.Log.warning('Could not find station {} in '
                            ' workspace'.format(station_coor))
             exit(1)
@@ -290,7 +289,7 @@ def label_nodes(graph):
         graph.node[station_coor]['type'] = 'station'
         already_labeled_nodes.append(station_coor)
 
-    for node, data in graph.nodes_iter(data=True):  # fastest iterator
+    for node, data in graph.nodes_iter(data=True):
         if 'type' not in data:
             data['type'] = ''
 
@@ -305,7 +304,7 @@ def print_edge_properties(graph, fclass_whitelist=None, tag_blacklist=None):
         tag_blacklist = ('code', 'lastchange', 'layer', 'ete', 'ShpName',
                          'Wkb', 'Wkt', 'Json')
 
-    for node1, adjacency_dict in graph.adjacency_iter():  # fastest iterator
+    for node1, adjacency_dict in graph.adjacency_iter():
         for node2, data in adjacency_dict.items():
             if 'fclass' not in data or data['fclass'] in fclass_whitelist:
                 print('\nLon: {}, Lat: {}  ~>'
@@ -314,6 +313,50 @@ def print_edge_properties(graph, fclass_whitelist=None, tag_blacklist=None):
                 for tag in sorted(data):
                     if tag not in tag_blacklist:
                         print('{}: {}'.format(tag, data[tag]))
+
+
+class CacheDijkstraPaths(object):
+    """Wrap some useful methods around dijkstra's shortest path."""
+
+    __dijkstra = None
+
+    def __init__(self, graph, weight='length',
+                 type_whitelist=('depot', 'customer', 'station')):
+        """Create cache of shortest paths over a graph."""
+        self.__dijkstra = dict()
+
+        # for each depot, customer, station
+        for src_node, src_data in graph.nodes_iter(data=True):
+            if src_data['type'] in type_whitelist:
+                # get distances and paths to all other nodes
+                lengths, paths = nx.single_source_dijkstra(graph, src_node,
+                                                           weight=weight)
+                # for each depot, customer, destination in distances and paths
+                for dest_node, dest_data in graph.nodes_iter(data=True):
+                    if dest_data['type'] in type_whitelist \
+                       and dest_node != src_node \
+                       and dest_node in lengths \
+                       and dest_node in paths:
+                        # cache the distance and the path in a dictionary
+                        if src_node not in self.__dijkstra:
+                            self.__dijkstra[src_node] = dict()
+                        d = {'length': lengths[dest_node],
+                             'path': paths[dest_node]}
+                        self.__dijkstra[src_node][dest_node] = d
+
+    def get_length(self, src, dest):
+        """Raises NetworkXNoPath on cache miss."""
+        if src in self.__dijkstra:
+            if dest in self.__dijkstra[src]:
+                return self.__dijkstra[src][dest]['length']
+        raise nx.exception.NetworkXNoPath('Length not found in cache')
+
+    def get_path(self, src, dest):
+        """Raises NetworkXNoPath on cache miss."""
+        if src in self.__dijkstra:
+            if dest in self.__dijkstra[src]:
+                return self.__dijkstra[src][dest]['path']
+        raise nx.exception.NetworkXNoPath('Path not found in cache')
 
 
 # ----------------------------------- MAIN ---------------------------------- #
@@ -340,26 +383,22 @@ check_problem_solvability(g)
 abstract_g = get_abstract_graph(g)
 
 
-
-
 dijkstra_graph = nx.DiGraph()
-for coor1 in list(abstract_g.node):
-    if abstract_g.node[coor1]['type'] != '':
-        for coor2 in list(abstract_g.node):
-            if abstract_g.node[coor2]['type'] != '':
+cache = CacheDijkstraPaths(abstract_g)
+for coor1, data1 in abstract_g.nodes_iter(data=True):
+    if data1['type'] in ('depot', 'customer', 'station'):
+        for coor2, data2 in abstract_g.nodes_iter(data=True):
+            if data2['type'] in ('depot', 'customer', 'station'):
+                # TODO REMOVE TRY-EXCEPT BLOCK
                 try:
-                    path = nx.shortest_path(abstract_g, coor1, coor2, 'length')
-                except nx.exception.NetworkXNoPath:
-                    continue
-                else:
-                    weight = nx.shortest_path_length(abstract_g, coor1, coor2, 'length')
                     dijkstra_graph.add_edge(coor1, coor2,
-                                            {'cost': float(weight)})
+                                            {'cost': cache.get_length(coor1,
+                                                                      coor2),
+                                             'path': cache.get_path(coor1,
+                                                                    coor2)})
+                except:
+                    pass
 
 
-
-
-
-IO.Log.info('', dijkstra_graph.node)
 print('\n' + '#' * 80)
 print_edge_properties(dijkstra_graph)

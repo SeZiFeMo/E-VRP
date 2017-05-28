@@ -68,6 +68,57 @@ def add_slope_to_edge_properties(graph):
             graph.add_edge(node1, node2, attr_dict={'slope':  slope})
 
 
+def label_nodes(graph):
+    """Ensure problem is applicable to graph and label nodes of interest."""
+    problem_file = utility.CLI.args().problem_file
+
+    if not os.path.isfile(problem_file):
+        IO.Log.warning('Problem file not found ({})'.format(problem_file))
+        exit(1)
+
+    with open(problem_file, 'r') as f:
+        problem = yaml.load(f)
+
+    already_labeled_nodes = list()
+    depot_coor = (problem['depot']['latitude'], problem['depot']['longitude'])
+    if depot_coor not in graph.node:
+        IO.Log.warning('Could not find depot {} in '
+                       ' workspace'.format(depot_coor))
+        exit(1)
+    graph.node[depot_coor]['type'] = 'depot'
+    already_labeled_nodes.append(depot_coor)
+
+    for node in problem['customers']:
+        cust_coor = (node['latitude'], node['longitude'])
+        if cust_coor not in graph.node:
+            IO.Log.warning('Could not find customer {} in '
+                           ' workspace'.format(cust_coor))
+            exit(1)
+        if cust_coor in already_labeled_nodes:
+            IO.Log.warning('Could not set multiple labels to '
+                           'node {} '.format(cust_coor))
+            exit(1)
+        graph.node[cust_coor]['type'] = 'customer'
+        already_labeled_nodes.append(cust_coor)
+
+    for node in problem['stations']:
+        station_coor = (node['latitude'], node['longitude'])
+        if station_coor not in graph.node:
+            IO.Log.warning('Could not find station {} in '
+                           ' workspace'.format(station_coor))
+            exit(1)
+        if station_coor in already_labeled_nodes:
+            IO.Log.warning('Could not set multiple labels to '
+                           'node {} '.format(station_coor))
+            exit(1)
+        graph.node[station_coor]['type'] = 'station'
+        already_labeled_nodes.append(station_coor)
+
+    for node, data in graph.nodes_iter(data=True):  # fastest iterator
+        if 'type' not in data:
+            data['type'] = ''
+
+
 def check_workspace():
     """Ensure workspace exist and it contains only necessary files."""
     ws = utility.CLI.args().workspace
@@ -163,7 +214,7 @@ def get_abstract_graph(graph):
     ret = nx.DiGraph()
 
     for node, data in graph.nodes_iter(data=True):  # fastest iterator
-        ret.add_node(node, altitude=data[altitude],
+        ret.add_node(node, altitude=data[altitude], type=data['type'],
                      longitude=node[0], latitude=node[1])
 
     for node1, adjacency_dict in graph.adjacency_iter():  # fastest iterator
@@ -250,36 +301,11 @@ check_workspace()  # <-- it exits if workspace is not compliant
 
 g = nx.read_shp(path=utility.CLI.args().workspace, simplify=True)
 add_slope_to_edge_properties(g)
+label_nodes(g)  # <-- it exits if problem file is not applicable to graph
 abstract_g = get_abstract_graph(g)
 
 
 
-
-customers, ref_stations, depot = 50, 10, 1 # overall nodes are 253
-
-for elem in abstract_g.node:
-    abstract_g.node[elem]['type'] = ''
-
-i = 0
-while i < customers:
-    k = random.choice(list(abstract_g.node))
-    elem = abstract_g.node[k]
-    if 'type' in elem and elem['type'] not in ('customer', 'station', 'depot'):
-        elem['type'] = 'customer'
-        i += 1
-j = 0
-while j < ref_stations:
-    k = random.choice(list(abstract_g.node))
-    elem = abstract_g.node[k]
-    if 'type' in elem and elem['type'] not in ('customer', 'station', 'depot'):
-        elem['type'] = 'station'
-        j += 1
-while True:
-    k = random.choice(list(abstract_g.node))
-    elem = abstract_g.node[k]
-    if 'type' in elem and elem['type'] not in ('customer', 'station', 'depot'):
-        elem['type'] = 'depot'
-        break
 
 dijkstra_graph = nx.DiGraph()
 for coor1 in list(abstract_g.node):

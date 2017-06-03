@@ -315,8 +315,58 @@ def print_edge_properties(graph, fclass_whitelist=None, tag_blacklist=None):
                         print('{}: {}'.format(tag, data[tag]))
 
 
+class CacheBellmanFordPaths(object):
+    """Wrap some useful methods around bellman-ford's shortest paths."""
+
+    __bellmanford = None
+
+    def __init__(self, graph, weight='slope',
+                 type_whitelist=('depot', 'customer', 'station')):
+        """Create cache of shortest paths over a graph."""
+        self.__bellmanford = dict()
+
+        # for each depot, customer, station
+        for src_node, src_data in graph.nodes_iter(data=True):
+            if src_data['type'] in type_whitelist:
+                # get lenghts and paths to all other nodes
+                predecessors, lengths = nx.bellman_ford(graph, src_node,
+                                                        weight=weight)
+                # for each depot, customer, destination in lenghts
+                for dest_node, dest_data in graph.nodes_iter(data=True):
+                    if dest_data['type'] in type_whitelist \
+                       and dest_node != src_node \
+                       and dest_node in lengths:
+                        # unroll the path from predecessors dictionary
+                        path = list()
+                        node_to_add = dest_node
+                        while predecessors[node_to_add] != src_node:
+                            path.append(node_to_add)
+                            node_to_add = predecessors[node_to_add]
+                        path.append(src_node)
+                        path = list(reversed(path))
+                        # cache the lenght and the path in a dictionary
+                        if src_node not in self.__bellmanford:
+                            self.__bellmanford[src_node] = dict()
+                        d = {'length': lengths[dest_node], 'path': path}
+                        self.__bellmanford[src_node][dest_node] = d
+
+    def get_length(self, src, dest):
+        """Raises NetworkXNoPath on cache miss."""
+        if src in self.__bellmanford:
+            if dest in self.__bellmanford[src]:
+                return self.__bellmanford[src][dest]['length']
+        raise nx.exception.NetworkXNoPath('Length not found in cache')
+
+    def get_path(self, src, dest):
+        """Raises NetworkXNoPath on cache miss."""
+        if src in self.__bellmanford:
+            if dest in self.__bellmanford[src]:
+                return self.__bellmanford[src][dest]['path']
+        raise nx.exception.NetworkXNoPath('Path not found in cache')
+
+
 class CacheDijkstraPaths(object):
-    """Wrap some useful methods around dijkstra's shortest path."""
+    """Wrap some useful methods around dijkstra's shortest paths."""
 
     __dijkstra = None
 
@@ -328,16 +378,16 @@ class CacheDijkstraPaths(object):
         # for each depot, customer, station
         for src_node, src_data in graph.nodes_iter(data=True):
             if src_data['type'] in type_whitelist:
-                # get distances and paths to all other nodes
+                # get lenghts and paths to all other nodes
                 lengths, paths = nx.single_source_dijkstra(graph, src_node,
                                                            weight=weight)
-                # for each depot, customer, destination in distances and paths
+                # for each depot, customer, destination in lenghts and paths
                 for dest_node, dest_data in graph.nodes_iter(data=True):
                     if dest_data['type'] in type_whitelist \
                        and dest_node != src_node \
                        and dest_node in lengths \
                        and dest_node in paths:
-                        # cache the distance and the path in a dictionary
+                        # cache the lenght and the path in a dictionary
                         if src_node not in self.__dijkstra:
                             self.__dijkstra[src_node] = dict()
                         d = {'length': lengths[dest_node],
@@ -382,22 +432,17 @@ label_nodes(g)  # <-- it exits if problem file is not applicable to graph
 check_problem_solvability(g)
 abstract_g = get_abstract_graph(g)
 
-
-dijkstra_graph = nx.DiGraph()
-cache = CacheDijkstraPaths(abstract_g)
+temp_graph = nx.DiGraph()
+cache = CacheBellmanFordPaths(abstract_g)
 for coor1, data1 in abstract_g.nodes_iter(data=True):
     if data1['type'] in ('depot', 'customer', 'station'):
         for coor2, data2 in abstract_g.nodes_iter(data=True):
             if data2['type'] in ('depot', 'customer', 'station'):
-                # TODO REMOVE TRY-EXCEPT BLOCK
-                try:
-                    dijkstra_graph.add_edge(coor1, coor2,
-                                            {'cost': cache.get_length(coor1,
-                                                                      coor2),
-                                             'path': cache.get_path(coor1,
-                                                                    coor2)})
-                except:
-                    pass
-
+                if coor1 != coor2:
+                    temp_graph.add_edge(coor1, coor2,
+                                        {'cost': cache.get_length(coor1,
+                                                                  coor2),
+                                         'path': cache.get_path(coor1,
+                                                                coor2)})
 print('\n' + '#' * 80)
-print_edge_properties(dijkstra_graph)
+print_edge_properties(temp_graph)

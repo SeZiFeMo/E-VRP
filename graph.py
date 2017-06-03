@@ -54,8 +54,8 @@ import utility
 utility.check_python_version()
 
 
-def add_slope_to_edge_properties(graph):
-    """Compute edges' slope in radians from node distance and altitude."""
+def add_elevation_properties_to_edges(graph):
+    """Add to edge properties slope and rise."""
     altitude = utility.CLI.args().altitude
     for node1, adjacency_dict in graph.adjacency_iter():
         for node2 in adjacency_dict:
@@ -63,8 +63,9 @@ def add_slope_to_edge_properties(graph):
             x1, y1 = node1  # from
             x2, y2 = node2  # to
             run = math.hypot(x2 - x1, y2 - y1)
-            slope = math.atan2(rise, run)
-            graph.add_edge(node1, node2, attr_dict={'slope':  slope})
+            slope = math.atan2(rise, run)  # in radians
+            graph.add_edge(node1, node2, attr_dict={'rise': rise,
+                                                    'slope': slope})
 
 
 def check_problem_solvability(graph):
@@ -191,7 +192,8 @@ def export_problem_to_directory():
 
 def get_abstract_graph(graph):
     """Create a copy of the graph without unnecessary attributes."""
-    necessary_edge_attr = ('length', 'oneway', 'osm_id', 'slope', 'speed')
+    necessary_edge_attr = ('length', 'oneway', 'osm_id',
+                           'rise', 'slope', 'speed')
     altitude = utility.CLI.args().altitude
     ret = nx.DiGraph()
 
@@ -207,6 +209,7 @@ def get_abstract_graph(graph):
             attr = dict()
             attr['length'] = data['length']
             attr['osm_id'] = data['osm_id']
+            attr['rise'] = data['rise']
             attr['slope'] = data['slope']
             if data['speed'] > 0:
                 attr['speed'] = data['speed']
@@ -217,6 +220,7 @@ def get_abstract_graph(graph):
 
             ret.add_edge(node1, node2, attr_dict=attr)
             if not data['oneway']:
+                attr['rise'] *= -1
                 attr['slope'] *= -1
                 ret.add_edge(node2, node1, attr_dict=attr)
 
@@ -320,7 +324,7 @@ class CacheBellmanFordPaths(object):
 
     __bellmanford = None
 
-    def __init__(self, graph, weight='slope',
+    def __init__(self, graph, weight='rise',
                  type_whitelist=('depot', 'customer', 'station')):
         """Create cache of shortest paths over a graph."""
         self.__bellmanford = dict()
@@ -427,7 +431,7 @@ if utility.CLI.args().workspace is None:
 check_workspace()  # <-- it exits if workspace is not compliant
 
 g = nx.read_shp(path=utility.CLI.args().workspace, simplify=True)
-add_slope_to_edge_properties(g)
+add_elevation_properties_to_edges(g)
 label_nodes(g)  # <-- it exits if problem file is not applicable to graph
 check_problem_solvability(g)
 abstract_g = get_abstract_graph(g)

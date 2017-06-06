@@ -372,14 +372,13 @@ class CachePaths(object):
                         # unroll the path from predecessors dictionary
                         greenest_path = list()
                         node_to_add = dest_node
-                        while g_pred[node_to_add] != src_node:
+                        while node_to_add is not None:
                             greenest_path.append(node_to_add)
                             node_to_add = g_pred[node_to_add]
-                        greenest_path.append(src_node)
                         greenest_path = list(reversed(greenest_path))
 
                         self.__add(graph, src_node, dest_node,
-                                   greenest_path, shortest_path)
+                                   greenest_path, shortest_path[dest_node])
 
     def greenest(self, src, dest):
         """Return greenest Path between src and dest."""
@@ -404,50 +403,50 @@ class CachePaths(object):
 class Path(object):
 
     __graph = None
-    __node_list = None
+
+    __nodes = None
+    """List of nodes, each node is a tuple: ( latitude, longitude, type )."""
 
     def __init__(self, graph, coor_list):
         """Initialize a path from a list of node coordinates."""
         self.__graph = graph
         for lat, lon in coor_list:
-            self.append({'latitude': lat,
-                         'longitude': lon,
-                         'type': graph.node[(lat, lon)]['type']})
+            self.append(lat, lon, graph.node[(lat, lon)]['type'])
 
     def __repr__(self):
-        return repr(self.__node_list)
+        return repr(self.__nodes)
 
     def __str__(self):
-        return str(self.__node_list)
+        return str(self.__nodes)
 
-    def append(self, node):
+    def append(self, node_latitude, node_longitude, node_type):
         """Insert node in last position of the node list."""
-        if self.__node_list is None:
-            self.__node_list = list()
-        self.__node_list.append(node)
+        if self.__nodes is None:
+            self.__nodes = list()
+        self.__nodes.append((node_latitude, node_longitude, node_type))
 
-    def remove(self, node):
+    def remove(self, node_latitude, node_longitude):
         """Remove from node list the specified node."""
         raise Exception('Not yet implemented')
 
-    def substitute(self, old_node, new_node):
+    def substitute(self, old_lat, old_lon, new_lat, new_lon):
         """Replace the old node with the new one."""
         raise Exception('Not yet implemented')
 
     def energy(self):
         """Sum of the energies of each edge between the nodes in the list."""
-        return 55
-        raise Exception('Not yet implemented')
+        return sum([self.__graph.edge[src[:2]][self.__nodes[i+1][:2]]['energy']
+                    for i, src in enumerate(self.__nodes[:-1])])
 
     def length(self):
         """Sum of the lengths of each edge between the nodes in the list."""
-        return 44
-        raise Exception('Not yet implemented')
+        return sum([self.__graph.edge[src[:2]][self.__nodes[i+1][:2]]['length']
+                    for i, src in enumerate(self.__nodes[:-1])])
 
     def time(self):
         """Sum of the times of each edge between the nodes in the list."""
-        return 33
-        raise Exception('Not yet implemented')
+        return sum([self.__graph.edge[src[:2]][self.__nodes[i+1][:2]]['time']
+                    for i, src in enumerate(self.__nodes[:-1])])
 
 
 # ----------------------------------- MAIN ---------------------------------- #

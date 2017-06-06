@@ -68,7 +68,7 @@ def add_energy_cost_to_edges(graph):
             graph.add_edge(node1, node2, attr_dict={'energy': energy,
                                                     'rise': rise,
                                                     'slope': slope,
-                                                    'time': 0}) # TODO
+                                                    'time': 0})  # TODO
 
 
 def check_problem_solvability(graph):
@@ -222,6 +222,7 @@ def get_abstract_graph(graph):
             else:
                 attr['speed'] = 50  # default value if no speed available
             # TODO add time !!
+            attr['time'] = 100  # FIXME set time properly
 
             ret.add_edge(node1, node2, attr_dict=attr)
             if not data['oneway']:
@@ -380,6 +381,14 @@ class CachePaths(object):
                         self.__add(graph, src_node, dest_node,
                                    greenest_path, shortest_path[dest_node])
 
+    def destination_iterator(self, dest):
+        """Return iterator over cached records ending in dest.
+
+           Destination is omitted from records.
+        """
+        return iter([(src, green, short)
+                     for src, d, green, short in self.__cache if d == dest])
+
     def greenest(self, src, dest):
         """Return greenest Path between src and dest."""
         for source, destination, greenest, shortest in self.__cache:
@@ -397,7 +406,12 @@ class CachePaths(object):
                                           '{} and {}'.format(src, dest))
 
     def source_iterator(self, src):
-        """Return iterator over cached records starting from src."""
+        """Return iterator over cached records starting from src.
+
+           Source is omitted from records.
+        """
+        return iter([(dest, green, short)
+                     for s, dest, green, short in self.__cache if s == src])
 
 
 class Path(object):
@@ -413,11 +427,19 @@ class Path(object):
         for lat, lon in coor_list:
             self.append(lat, lon, graph.node[(lat, lon)]['type'])
 
+    def __iter__(self):
+        """Return iterator over tuple (latitude, longitude, type)."""
+        return iter(self.__nodes)
+
     def __repr__(self):
         return repr(self.__nodes)
 
     def __str__(self):
         return str(self.__nodes)
+
+    def __sum_over_label(self, label):
+        return sum([self.__graph.edge[src[:2]][self.__nodes[i + 1][:2]][label]
+                    for i, src in enumerate(self.__nodes[:-1])])
 
     def append(self, node_latitude, node_longitude, node_type):
         """Insert node in last position of the node list."""
@@ -425,28 +447,34 @@ class Path(object):
             self.__nodes = list()
         self.__nodes.append((node_latitude, node_longitude, node_type))
 
-    def remove(self, node_latitude, node_longitude):
+    @property
+    def energy(self):
+        """Sum of the energies of each edge between the nodes in the list."""
+        return self.__sum_over_label('energy')
+
+    @property
+    def length(self):
+        """Sum of the lengths of each edge between the nodes in the list."""
+        return self.__sum_over_label('length')
+
+    def remove(self, node_latitude, node_longitude, node_type=''):
         """Remove from node list the specified node."""
-        raise Exception('Not yet implemented')
+        for index, record in enumerate(self.__nodes):
+            if record[:2] == (node_latitude, node_longitude):
+                del self.__nodes[index]
 
     def substitute(self, old_lat, old_lon, new_lat, new_lon):
         """Replace the old node with the new one."""
-        raise Exception('Not yet implemented')
+        for index, record in enumerate(self.__nodes):
+            if record[:2] == (old_lat, old_lon):
+                record = (new_lat, new_lon,
+                          self.__graph.node[(new_lat, new_lon)]['type'])
+                self.__nodes[index] = record
 
-    def energy(self):
-        """Sum of the energies of each edge between the nodes in the list."""
-        return sum([self.__graph.edge[src[:2]][self.__nodes[i+1][:2]]['energy']
-                    for i, src in enumerate(self.__nodes[:-1])])
-
-    def length(self):
-        """Sum of the lengths of each edge between the nodes in the list."""
-        return sum([self.__graph.edge[src[:2]][self.__nodes[i+1][:2]]['length']
-                    for i, src in enumerate(self.__nodes[:-1])])
-
+    @property
     def time(self):
         """Sum of the times of each edge between the nodes in the list."""
-        return sum([self.__graph.edge[src[:2]][self.__nodes[i+1][:2]]['time']
-                    for i, src in enumerate(self.__nodes[:-1])])
+        return self.__sum_over_label('time')
 
 
 # ----------------------------------- MAIN ---------------------------------- #
@@ -472,24 +500,20 @@ label_nodes(g)  # <-- it exits if problem file is not applicable to graph
 check_problem_solvability(g)
 abstract_g = get_abstract_graph(g)
 
-temp_graph = nx.DiGraph()
 cache = CachePaths(abstract_g)
-for coor1, data1 in abstract_g.nodes_iter(data=True):
-    if data1['type'] in ('depot', 'customer', 'station'):
-        for coor2, data2 in abstract_g.nodes_iter(data=True):
-            if data2['type'] in ('depot', 'customer', 'station'):
-                if coor1 != coor2:
-                    temp_graph.add_edge(coor1, coor2,
-                                        {'shortest_length':
-                                         cache.shortest(coor1, coor2).length(),
-                                         'shortest_path':
-                                         str(cache.shortest(coor1, coor2)),
 
-                                         'greenest_energy':
-                                         cache.greenest(coor1, coor2).energy(),
-                                         'greenest_path':
-                                         repr(cache.shortest(coor1, coor2)),
+# Usage example
+for coor, data in abstract_g.nodes_iter(data=True):
+    if data['type'] == 'depot':
+        # iterate over path starting from depot
+        for dest, green, short in cache.source_iterator(coor):
+            print(f'shortest path:  (length: {short.length}, '
+                  f'energy: {short.energy}, time: {short.time})')
+            for node in short:
+                print('\tlat: {:2.7f}, lon: {:2.7f}, type: {}'.format(*node))
 
-                                         })
-print('\n' + '#' * 80)
-print_edge_properties(temp_graph)
+            print(f'greenest path:  (length: {green.length}, '
+                  f'energy: {green.energy}, time: {green.time})')
+            for node in green:
+                print('\tlat: {:2.7f}, lon: {:2.7f}, type: {}'.format(*node))
+            print('#' * 80)

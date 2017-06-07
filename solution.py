@@ -36,7 +36,9 @@ if __name__ == '__main__':
     IO.Log.warning('Please do not load that script, run it!')
     exit(1)
 
+
 class Solution(object):
+
     def __init__(self):
         self.routes = []
 
@@ -45,31 +47,38 @@ class Solution(object):
 
 
 class Route(object):
-    def __init__(self):
-        self.nodes = {}
-        self.time = 0
-        pass
+    """A Route is a path with some battery information for each node in it."""
 
-    def append(self, node):
-        if not is_feasible():
-            raise UnfeasibleRouteException(
-                    f'Adding {node} creates a non-feasible route')
+    path = None
 
-    def remove(self, node):
-        if not is_feasible():
-            raise UnfeasibleRouteException(
-                    f'Removing {node} creates a non-feasible route')
+    battery = None
 
-    def substitute(self, node1, node2):
-        if not is_feasible():
+    def __init__(self, graph, coor_list=None, battery_list=None):
+        self.path = Path(graph, coor_list)
+        # self.battery = TODO implement a Battery class
+
+    def append(self, node):  # TODO wrap and expand path.append()
+        if not self.is_feasible():
             raise UnfeasibleRouteException(
-                    f'Substituting {node1} with {node2} creates a non-feasible route')
+                f'Adding {node} creates a non-feasible route')
+
+    def remove(self, node):  # TODO wrap and expand path.remove
+        if not self.is_feasible():
+            raise UnfeasibleRouteException(
+                f'Removing {node} creates a non-feasible route')
+
+    def substitute(self, node1, node2):  # TODO wrap and expand path.substitute
+        if not self.is_feasible():
+            raise UnfeasibleRouteException(
+                f'Substituting {node1} with {node2} creates a non-feasible route')
 
     def is_feasible(self):
         """Check the feasibility of the entire Route."""
         return True
 
+
 class UnfeasibleRouteException(Exception):
+
     def __init__(self, msg):
         self._msg = msg
         Exception.__init__(self, msg)

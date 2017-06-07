@@ -54,23 +54,6 @@ import utility
 utility.check_python_version()
 
 
-def add_energy_cost_to_edges(graph):
-    """Add to edge properties slope and rise."""
-    altitude = utility.CLI.args().altitude
-    for node1, adjacency_dict in graph.adjacency_iter():
-        for node2 in adjacency_dict:
-            rise = graph.node[node2][altitude] - graph.node[node1][altitude]
-            x1, y1 = node1  # from
-            x2, y2 = node2  # to
-            run = math.hypot(x2 - x1, y2 - y1)
-            slope = math.atan2(rise, run)  # in radians
-            energy = rise  # TODO need some physics here
-            graph.add_edge(node1, node2, attr_dict={'energy': energy,
-                                                    'rise': rise,
-                                                    'slope': slope,
-                                                    'time': 0})  # TODO
-
-
 def check_problem_solvability(graph):
     """Test if customers and stations are reachable from depot."""
     depot, customers, stations = None, list(), list()
@@ -193,43 +176,60 @@ def export_problem_to_directory():
     exit(0)
 
 
-def get_abstract_graph(graph):
-    """Create a copy of the graph without unnecessary attributes."""
-    necessary_edge_attr = ('energy', 'length', 'oneway', 'osm_id', 'rise',
-                           'slope', 'speed', 'time')
-    altitude = utility.CLI.args().altitude
+def get_abstract_graph(osm_graph):
+    """Create a copy of the osm_graph with only necessary attributes.
+
+        Node attributes:
+            -'altitude':  elevation or height above sea level [meters]
+            -'latitude':  angle with equator                  [decimal degrees]
+            -'longitude': angle with greenwich                [decimal degrees]
+            -'type':      'depot' or 'customer' or 'station' or ''
+
+        Added edge attributes:
+            -energy: energy spent to traverse a road          [kiloJoule]
+            -rise:   altitude difference between dest and src [meters]
+            -slope:  angle describing the steepness of a road [radians]
+            -time:   time spent to traverse a road            [minutes]
+        Kept edge attributes:
+            -length:                                          [meters]
+            -osm_id: open streetmap identifier of a road
+            -speed:                                           [kilometers/hour]
+    """
+    necessary_osm_attr = ('length', 'oneway', 'osm_id')
+    alt = utility.CLI.args().altitude
     ret = nx.DiGraph()
 
-    for node, data in graph.nodes_iter(data=True):
-        ret.add_node(node, altitude=data[altitude], type=data['type'],
+    for node, data in osm_graph.nodes_iter(data=True):
+        ret.add_node(node, altitude=data[alt], type=data['type'],
                      longitude=node[0], latitude=node[1])
 
-    for node1, adjacency_dict in graph.adjacency_iter():
-        for node2, data in adjacency_dict.items():
-            if not all(tag in data for tag in necessary_edge_attr):
+    for src, adjacency_dict in osm_graph.adjacency_iter():
+        for dest, data in adjacency_dict.items():
+            if not all(tag in data for tag in necessary_osm_attr):
                 continue
-
             attr = dict()
-            attr['energy'] = data['energy']
             attr['length'] = data['length']
             attr['osm_id'] = data['osm_id']
-            attr['rise'] = data['rise']
-            attr['slope'] = data['slope']
+            attr['rise'] = osm_graph.node[dest][alt] - osm_graph.node[src][alt]
+            attr['slope'] = math.atan2(attr['rise'], attr['length'])
             if data['speed'] > 0:
                 attr['speed'] = data['speed']
             elif 'maxspeed' in data and data['maxspeed'] > 0:
                 attr['speed'] = data['maxspeed']
             else:
                 attr['speed'] = 50  # default value if no speed available
-            # TODO add time !!
-            attr['time'] = 100  # FIXME set time properly
+            attr['time'] = (attr['length'] / (attr['speed'] / 3.6)) / 60.0
 
-            ret.add_edge(node1, node2, attr_dict=attr)
+            # temporary set to rise; FIXME with some physics formula
+            attr['energy'] = attr['rise']
+
+            ret.add_edge(src, dest, attr_dict=attr)
+
             if not data['oneway']:
                 attr['energy'] *= -1  # TODO need some physics here
                 attr['rise'] *= -1
                 attr['slope'] *= -1
-                ret.add_edge(node2, node1, attr_dict=attr)
+                ret.add_edge(dest, src, attr_dict=attr)
 
     return ret
 
@@ -415,15 +415,19 @@ class CachePaths(object):
 
 
 class Path(object):
+    """A path is a sequence of nodes visited in a given order."""
 
     __graph = None
 
     __nodes = None
     """List of nodes, each node is a tuple: ( latitude, longitude, type )."""
 
-    def __init__(self, graph, coor_list):
+    def __init__(self, graph, coor_list=None):
         """Initialize a path from a list of node coordinates."""
         self.__graph = graph
+        self.__nodes = list()
+        if coor_list is None:
+            return
         for lat, lon in coor_list:
             self.append(lat, lon, graph.node[(lat, lon)]['type'])
 
@@ -443,8 +447,6 @@ class Path(object):
 
     def append(self, node_latitude, node_longitude, node_type):
         """Insert node in last position of the node list."""
-        if self.__nodes is None:
-            self.__nodes = list()
         self.__nodes.append((node_latitude, node_longitude, node_type))
 
     @property
@@ -494,12 +496,11 @@ if utility.CLI.args().workspace is None:
 
 check_workspace()  # <-- it exits if workspace is not compliant
 
-g = nx.read_shp(path=utility.CLI.args().workspace, simplify=True)
-add_energy_cost_to_edges(g)
-label_nodes(g)  # <-- it exits if problem file is not applicable to graph
-check_problem_solvability(g)
-abstract_g = get_abstract_graph(g)
+osm_g = nx.read_shp(path=utility.CLI.args().workspace, simplify=True)
+label_nodes(osm_g)  # <-- it exits if problem file is not applicable to graph
+check_problem_solvability(osm_g)
 
+abstract_g = get_abstract_graph(osm_g)
 cache = CachePaths(abstract_g)
 
 # Usage example

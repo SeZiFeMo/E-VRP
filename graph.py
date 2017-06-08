@@ -424,6 +424,7 @@ class Path(object):
 
     def __init__(self, graph, coor_list=None):
         """Initialize a path from a list of node coordinates."""
+        self.__saved = dict()
         self.__graph = graph
         self.__nodes = list()
         if coor_list is None:
@@ -442,8 +443,11 @@ class Path(object):
         return str(self.__nodes)
 
     def __sum_over_label(self, label):
-        return sum([self.__graph.edge[src[:2]][self.__nodes[i + 1][:2]][label]
-                    for i, src in enumerate(self.__nodes[:-1])])
+        if label not in self.__saved:
+            s = sum([self.__graph.edge[src[:2]][self.__nodes[i + 1][:2]][label]
+                     for i, src in enumerate(self.__nodes[:-1])])
+            self.__saved[label] = s
+        return self.__saved[label]
 
     def append(self, node_latitude, node_longitude, node_type):
         """Insert node in last position of the node list."""

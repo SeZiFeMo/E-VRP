@@ -220,14 +220,17 @@ def get_abstract_graph(osm_graph):
                 attr['speed'] = 50  # default value if no speed available
             attr['time'] = (attr['length'] / (attr['speed'] / 3.6)) / 60.0
 
-            # temporary set to rise; FIXME with some physics formula
-            attr['energy'] = attr['rise']
+            def energy(rise):
+                theta = -2/3 if rise < 0 else 1
+                return 421200 + 1185 * 9.81 * theta * rise
+
+            attr['energy'] = energy(attr['rise'])
 
             ret.add_edge(src, dest, attr_dict=attr)
 
             if not data['oneway']:
-                attr['energy'] *= -1  # TODO need some physics here
                 attr['rise'] *= -1
+                attr['energy'] = energy(attr['rise'])
                 attr['slope'] *= -1
                 ret.add_edge(dest, src, attr_dict=attr)
 
@@ -331,7 +334,8 @@ class CachePaths(object):
 
     __cache = None
     """List of tuples:
-       ( (src_lat, src_lon), (dst_lat, dst_lon), greenest_path, shortest_path )
+       ((src_lat, src_lon), (dst_lat, dst_lon), greenest_path, shortest_path),
+       where greenest_path and shortest_path are objects of type Path.
     """
 
     def __add(self, graph, src, dest, greenest, shortest):

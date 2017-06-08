@@ -50,6 +50,7 @@ import yaml
 
 import IO
 import utility
+import solution
 
 utility.check_python_version()
 
@@ -342,7 +343,9 @@ class CachePaths(object):
         """Append to cache two new paths between src and dest."""
         if src == dest:
             return
-        record = (src, dest, Path(graph, greenest), Path(graph, shortest))
+        record = (src, dest,
+                  solution.Path(graph, greenest),
+                  solution.Path(graph, shortest))
         for index, tup in enumerate(self.__cache):
             # update record if already existing
             if tup[0:2] == (src, dest):
@@ -416,71 +419,6 @@ class CachePaths(object):
         """
         return iter([(dest, green, short)
                      for s, dest, green, short in self.__cache if s == src])
-
-
-class Path(object):
-    """A path is a sequence of nodes visited in a given order."""
-
-    __graph = None
-
-    __nodes = None
-    """List of nodes, each node is a tuple: ( latitude, longitude, type )."""
-
-    def __init__(self, graph, coor_list=None):
-        """Initialize a path from a list of node coordinates."""
-        self.__graph = graph
-        self.__nodes = list()
-        if coor_list is None:
-            return
-        for lat, lon in coor_list:
-            self.append(lat, lon, graph.node[(lat, lon)]['type'])
-
-    def __iter__(self):
-        """Return iterator over tuple (latitude, longitude, type)."""
-        return iter(self.__nodes)
-
-    def __repr__(self):
-        return repr(self.__nodes)
-
-    def __str__(self):
-        return str(self.__nodes)
-
-    def __sum_over_label(self, label):
-        return sum([self.__graph.edge[src[:2]][self.__nodes[i + 1][:2]][label]
-                    for i, src in enumerate(self.__nodes[:-1])])
-
-    def append(self, node_latitude, node_longitude, node_type):
-        """Insert node in last position of the node list."""
-        self.__nodes.append((node_latitude, node_longitude, node_type))
-
-    @property
-    def energy(self):
-        """Sum of the energies of each edge between the nodes in the list."""
-        return self.__sum_over_label('energy')
-
-    @property
-    def length(self):
-        """Sum of the lengths of each edge between the nodes in the list."""
-        return self.__sum_over_label('length')
-
-    def remove(self, node_latitude, node_longitude, node_type=''):
-        """Remove from node list the specified node."""
-        for index, record in enumerate(self.__nodes):
-            if record[:2] == (node_latitude, node_longitude):
-                del self.__nodes[index]
-
-    def substitute(self, old_lat, old_lon, new_lat, new_lon):
-        """Replace the old node with the new one."""
-        for index, record in enumerate(self.__nodes):
-            if record[:2] == (old_lat, old_lon):
-                record = (new_lat, new_lon,
-                          self.__graph.node[(new_lat, new_lon)]['type'])
-                self.__nodes[index] = record
-
-    @property
-    def time(self):
-        """Sum of the times of each edge between the nodes in the list."""
-        return self.__sum_over_label('time')
 
 
 # ----------------------------------- MAIN ---------------------------------- #

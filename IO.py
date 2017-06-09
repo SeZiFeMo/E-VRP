@@ -118,8 +118,11 @@ def export_problem_to_directory(exit_on_success=False):
         raise SystemExit(0)
 
 
-def import_shapefile_to_workspace():
-    """Populate workspace with translation of import_shapefile into a graph."""
+def import_shapefile_to_workspace(exit_on_success=False):
+    """Populate workspace with translation of import_shapefile into a graph.
+
+       Raises NameError
+    """
     import_file = utility.CLI.args().import_file
     ws = utility.CLI.args().workspace
 
@@ -127,15 +130,14 @@ def import_shapefile_to_workspace():
     Log.info('File \'{}\' imported correctly'.format(import_file))
 
     if not ws:
-        Log.warning('Please set workspace dir')
-        exit(1)
+        raise NameError('Please set workspace dir')
 
     nx.write_shp(imported_graph, ws)
-    Log.info('Exported correctly to \'{}\' nodes.shp and '
-             'edges.shp\n'.format(ws))
+    Log.info(f'Exported correctly to \'{ws}\' nodes.shp and edges.shp\n')
     Log.info('PLEASE ADD TO \'{}\' ELEVATION '
              'INFORMATION !'.format(os.path.join(ws, 'nodes.shp')))
-    exit(0)
+    if exit_on_success:
+        raise SystemExit(0)
 
 
 def load_yaml_file(path):

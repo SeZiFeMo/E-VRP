@@ -323,7 +323,11 @@ class CachePaths(object):
 # ----------------------------------- MAIN ---------------------------------- #
 
 if utility.CLI.args().import_file:
-    IO.import_shapefile_to_workspace()  # <-- it always exits
+    try:
+        IO.import_shapefile_to_workspace(exit_on_success=True)
+    except NameError as e:
+        print(str(e))
+        exit(1)
 
 if utility.CLI.args().export_dir:
     try:
@@ -333,11 +337,11 @@ if utility.CLI.args().export_dir:
         exit(e.errno)
 
 if utility.CLI.args().workspace is None:
-    print('\nFirst of all import a shapefile (-i option) to a workspace '
-          'directory (-w option)\n\n'
-          'Then run the program specifing the workspace to use '
-          '(with -w option)')
-    exit(0)
+    try:
+        raise utility.UsageException()
+    except utility.UsageException as e:
+        print(str(e))
+        exit(1)
 
 try:
     IO.check_workspace()

@@ -125,3 +125,14 @@ class CLI(object):
             # When program starts print license header
             print(CLI._epilog.partition('\nREQUIREMENTS')[0])
         return CLI._args
+
+
+class UsageException(Exception):
+
+    def __init__(self, message=None):
+        if message is None:
+            message = ('\nFirst of all import a shapefile (-i option) to a '
+                       'workspace directory (-w option)\n\n'
+                       'Then run the program specifing the workspace to use '
+                       '(with -w option)\n')
+        super(UsageException, self).__init__(message)

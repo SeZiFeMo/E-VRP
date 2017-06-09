@@ -92,7 +92,7 @@ def export_problem_to_directory(exit_on_success=False):
     if not os.path.isfile(problem_file):
         raise FileNotFoundError(errno.ENOENT, 'Problem file not found '
                                 f'({problem_file})')
-    problem = load_yaml_file(problem_file)
+    problem = load_problem_file()
 
     if not os.path.isdir(export_dir):
         os.makedirs(export_dir)
@@ -140,8 +140,8 @@ def import_shapefile_to_workspace(exit_on_success=False):
         raise SystemExit(0)
 
 
-def load_yaml_file(path):
-    with open(path, 'r') as f:
+def load_problem_file():
+    with open(utility.CLI.args().problem_file, 'r') as f:
         return yaml.load(f)
 
 

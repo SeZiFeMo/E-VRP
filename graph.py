@@ -116,6 +116,7 @@ def get_abstract_graph(osm_graph):
             -speed:                                           [kilometers/hour]
     """
     necessary_osm_attr = ('length', 'oneway', 'osm_id')
+    car = IO.load_problem_file()['car'][1]
     alt = utility.CLI.args().altitude
     ret = nx.DiGraph()
 
@@ -140,17 +141,19 @@ def get_abstract_graph(osm_graph):
                 attr['speed'] = 50  # default value if no speed available
             attr['time'] = (attr['length'] / (attr['speed'] / 3.6)) / 60.0
 
-            def energy(rise):
+            def energy(rise, car):
+                consumption = car['consumption']
+                consumption *= 3.6 * 10 ** 4  # (kW⋅h/100km) to (Joule/km)
                 theta = -2/3 if rise < 0 else 1
-                return 421200 + 1185 * 9.81 * theta * rise
+                return consumption + car['weight'] * 9.81 * theta * rise
 
-            attr['energy'] = energy(attr['rise'])
+            attr['energy'] = energy(attr['rise'], car)
 
             ret.add_edge(src, dest, attr_dict=attr)
 
             if not data['oneway']:
                 attr['rise'] *= -1
-                attr['energy'] = energy(attr['rise'])
+                attr['energy'] = energy(attr['rise'], car)
                 attr['slope'] *= -1
                 ret.add_edge(dest, src, attr_dict=attr)
 
@@ -165,7 +168,7 @@ def label_nodes(graph):
         IO.Log.warning('Problem file not found ({})'.format(problem_file))
         exit(1)
 
-    problem = IO.load_yaml_file(problem_file)
+    problem = IO.load_problem_file()
 
     already_labeled_nodes = list()
     depot_coor = (problem['depot'][0]['latitude'],

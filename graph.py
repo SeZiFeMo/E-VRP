@@ -326,7 +326,11 @@ if utility.CLI.args().import_file:
     IO.import_shapefile_to_workspace()  # <-- it always exits
 
 if utility.CLI.args().export_dir:
-    IO.export_problem_to_directory()  # <-- it always exits
+    try:
+        IO.export_problem_to_directory(exit_on_success=True)
+    except FileNotFoundError as e:
+        print(str(e))
+        exit(e.errno)
 
 if utility.CLI.args().workspace is None:
     print('\nFirst of all import a shapefile (-i option) to a workspace '

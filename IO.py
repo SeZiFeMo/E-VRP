@@ -81,43 +81,41 @@ def check_workspace():
                                   '\'{}\''.format(os.path.join(ws, f)))
 
 
-def export_problem_to_directory():
-    """Populate directory with a shapefile representation of the problem."""
+def export_problem_to_directory(exit_on_success=False):
+    """Populate directory with a shapefile representation of the problem.
+
+       Raises FileNotFoundError
+    """
     export_dir = utility.CLI.args().export_dir
     problem_file = utility.CLI.args().problem_file
 
     if not os.path.isfile(problem_file):
-        Log.warning('Problem file not found ({})'.format(problem_file))
-        exit(1)
+        raise FileNotFoundError(errno.ENOENT, 'Problem file not found '
+                                f'({problem_file})')
+    problem = load_yaml_file(problem_file)
 
     if not os.path.isdir(export_dir):
         os.makedirs(export_dir)
 
-    problem = load_yaml_file(problem_file)
-
     temp_graph = nx.DiGraph()
-    temp_graph.add_node((problem['depot']['latitude'],
-                         problem['depot']['longitude']))
+    temp_graph.add_node((problem['depot'][0]['latitude'],
+                         problem['depot'][0]['longitude']))
     nx.write_shp(temp_graph, os.path.join(export_dir, 'depot.shp'))
 
-    temp_graph = nx.DiGraph()
-    for node in problem['customers']:
-        temp_graph.add_node((node['latitude'],
-                             node['longitude']))
-    nx.write_shp(temp_graph, os.path.join(export_dir, 'customers.shp'))
-
-    temp_graph = nx.DiGraph()
-    for node in problem['stations']:
-        temp_graph.add_node((node['latitude'],
-                             node['longitude']))
-    nx.write_shp(temp_graph, os.path.join(export_dir, 'stations.shp'))
+    for node_type in ('customers', 'stations'):
+        temp_graph = nx.DiGraph()
+        for node in problem[node_type]:
+            temp_graph.add_node((node['latitude'],
+                                 node['longitude']))
+        nx.write_shp(temp_graph, os.path.join(export_dir, node_type + '.shp'))
 
     for ext in ('dbf', 'shp', 'shx'):
         os.remove(os.path.join(export_dir, 'edges.' + ext))
 
-    Log.info('Exported correctly to \'{}\' depot.shp, customers.shp and '
-             'stations.shp\n'.format(export_dir))
-    exit(0)
+    Log.info(f'Exported correctly to \'{export_dir}\' '
+             'depot.shp, customers.shp and stations.shp\n')
+    if exit_on_success:
+        raise SystemExit(0)
 
 
 def import_shapefile_to_workspace():

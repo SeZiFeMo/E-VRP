@@ -87,11 +87,6 @@ def export_problem_to_directory(exit_on_success=False):
        Raises FileNotFoundError
     """
     export_dir = utility.CLI.args().export_dir
-    problem_file = utility.CLI.args().problem_file
-
-    if not os.path.isfile(problem_file):
-        raise FileNotFoundError(errno.ENOENT, 'Problem file not found '
-                                f'({problem_file})')
     problem = load_problem_file()
 
     if not os.path.isdir(export_dir):
@@ -141,7 +136,15 @@ def import_shapefile_to_workspace(exit_on_success=False):
 
 
 def load_problem_file():
-    with open(utility.CLI.args().problem_file, 'r') as f:
+    """Parse problem file content and return it.
+
+       Raises FileNotFoundError.
+    """
+    problem_file = utility.CLI.args().problem_file
+    if not os.path.isfile(problem_file):
+        raise FileNotFoundError(errno.ENOENT,
+                                f'Problem file not found ({problem_file})')
+    with open(problem_file, 'r') as f:
         return yaml.load(f)
 
 

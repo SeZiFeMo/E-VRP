@@ -24,6 +24,7 @@
     along with E-VRP.  If not, see <http://www.gnu.org/licenses/>.
 """
 
+import errno
 import logging
 import networkx as nx
 import os
@@ -37,20 +38,26 @@ __license__ = "GPL3"
 
 
 def check_workspace():
-    """Ensure workspace exist and it contains only necessary files."""
+    """Ensure workspace exist and it contains only necessary files.
+
+       Otherwise it could raise:
+           - FileExistsError
+           - FileNotFoundError
+           - NameError
+           - TypeError
+    """
     ws = utility.CLI.args().workspace
     if not os.path.isdir(ws):
-        Log.warning('Directory not found ({})'.format(ws))
-        Log.warning('Please set a correct workspace')
-        exit(1)
+        raise FileNotFoundError(errno.ENOENT, f'Directory {ws} not found'
+                                '\n          Please set a correct workspace')
 
     if not os.path.isfile(os.path.join(ws, 'edges.shp')):
-        Log.warning('edges.shp not found in workspace ({})'.format(ws))
-        exit(1)
+        raise FileNotFoundError(errno.ENOENT, 'edges.shp not found in '
+                                f'workspace ({ws})')
 
     if not os.path.isfile(os.path.join(ws, 'nodes.shp')):
-        Log.warning('nodes.shp not found in workspace ({})'.format(ws))
-        exit(1)
+        raise FileNotFoundError(errno.ENOENT, 'nodes.shp not found in '
+                                f'workspace ({ws})')
 
     graph_read = nx.read_shp(path=os.path.join(ws, 'nodes.shp'), simplify=True)
 
@@ -58,22 +65,20 @@ def check_workspace():
     altitude = utility.CLI.args().altitude
     for node, data in graph_read.nodes_iter(data=True):
         if altitude not in data:
-            Log.warning('Could not find \'{}\' attribute in '
-                        'nodes.shp'.format(altitude))
-            exit(1)
+            raise NameError(f'Could not find \'{altitude}\' attribute in '
+                            'nodes.shp')
 
         # check each altitude attribute is a floating point number
         if not isinstance(data[altitude], float):
-            Log.warning('Altitude of node lat: {}, lon {} is not a '
-                        'float'.format(*node))
-            exit(1)
+            raise TypeError('Altitude of node lat: {}, lon {} is not a '
+                            'float'.format(*node))
 
     for f in os.listdir(ws):
         if f not in [prefix + suffix
                      for prefix in ('nodes.', 'edges.')
                      for suffix in ('dbf', 'shp', 'shx')]:
-            Log.warning('Please remove \'{}\''.format(os.path.join(ws, f)))
-            exit(1)
+            raise FileExistsError(errno.EEXIST, 'Please remove '
+                                  '\'{}\''.format(os.path.join(ws, f)))
 
 
 def export_problem_to_directory():

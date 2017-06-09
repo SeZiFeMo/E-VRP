@@ -335,7 +335,11 @@ if utility.CLI.args().workspace is None:
           '(with -w option)')
     exit(0)
 
-IO.check_workspace()  # <-- it exits if workspace is not compliant
+try:
+    IO.check_workspace()
+except (FileExistsError, FileNotFoundError, NameError, TypeError) as e:
+    print(str(e))
+    exit(1)
 
 osm_g = nx.read_shp(path=utility.CLI.args().workspace, simplify=True)
 label_nodes(osm_g)  # <-- it exits if problem file is not applicable to graph

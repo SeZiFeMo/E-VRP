@@ -46,7 +46,6 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import os
 import warnings
-import yaml
 
 import IO
 import utility
@@ -89,92 +88,12 @@ def check_problem_solvability(graph):
         exit(1)
 
 
-def check_workspace():
-    """Ensure workspace exist and it contains only necessary files."""
-    ws = utility.CLI.args().workspace
-    if not os.path.isdir(ws):
-        IO.Log.warning('Directory not found ({})'.format(ws))
-        IO.Log.warning('Please set a correct workspace')
-        exit(1)
-
-    if not os.path.isfile(os.path.join(ws, 'edges.shp')):
-        IO.Log.warning('edges.shp not found in workspace ({})'.format(ws))
-        exit(1)
-
-    if not os.path.isfile(os.path.join(ws, 'nodes.shp')):
-        IO.Log.warning('nodes.shp not found in workspace ({})'.format(ws))
-        exit(1)
-
-    graph_read = nx.read_shp(path=os.path.join(ws, 'nodes.shp'), simplify=True)
-
-    # check each node has an altitude attribute
-    altitude = utility.CLI.args().altitude
-    for node, data in graph_read.nodes_iter(data=True):
-        if altitude not in data:
-            IO.Log.warning('Could not find \'{}\' attribute in '
-                           'nodes.shp'.format(altitude))
-            exit(1)
-
-        # check each altitude attribute is a floating point number
-        if not isinstance(data[altitude], float):
-            IO.Log.warning('Altitude of node lat: {}, lon {} is not a '
-                           'float'.format(*node))
-            exit(1)
-
-    for f in os.listdir(ws):
-        if f not in [prefix + suffix
-                     for prefix in ('nodes.', 'edges.')
-                     for suffix in ('dbf', 'shp', 'shx')]:
-            IO.Log.warning('Please remove \'{}\''.format(os.path.join(ws, f)))
-            exit(1)
-
-
 def draw(graph):
     """Wrap networkx draw function and suppress its warnings."""
     with warnings.catch_warnings():
         warnings.filterwarnings('ignore', category=UserWarning)
         nx.draw(graph)
     plt.show()
-
-
-def export_problem_to_directory():
-    """Populate directory with a shapefile representation of the problem."""
-    export_dir = utility.CLI.args().export_dir
-    problem_file = utility.CLI.args().problem_file
-
-    if not os.path.isfile(problem_file):
-        IO.Log.warning('Problem file not found ({})'.format(problem_file))
-        exit(1)
-
-    if not os.path.isdir(export_dir):
-        os.makedirs(export_dir)
-
-    with open(problem_file, 'r') as f:
-        problem = yaml.load(f)
-
-    temp_graph = nx.DiGraph()
-    temp_graph.add_node((problem['depot']['latitude'],
-                         problem['depot']['longitude']))
-    nx.write_shp(temp_graph, os.path.join(export_dir, 'depot.shp'))
-
-    temp_graph = nx.DiGraph()
-    for node in problem['customers']:
-        temp_graph.add_node((node['latitude'],
-                             node['longitude']))
-    nx.write_shp(temp_graph, os.path.join(export_dir, 'customers.shp'))
-
-    temp_graph = nx.DiGraph()
-    for node in problem['stations']:
-        temp_graph.add_node((node['latitude'],
-                             node['longitude']))
-    nx.write_shp(temp_graph, os.path.join(export_dir, 'stations.shp'))
-
-    for ext in ('dbf', 'shp', 'shx'):
-        os.remove(os.path.join(export_dir, 'edges.' + ext))
-
-    IO.Log.info('Exported correctly to \'{}\' depot.shp, customers.shp and '
-                'stations.shp\n'.format(export_dir))
-    exit(0)
 
 
 def get_abstract_graph(osm_graph):
@@ -238,26 +157,6 @@ def get_abstract_graph(osm_graph):
     return ret
 
 
-def import_shapefile_to_workspace():
-    """Populate workspace with translation of import_shapefile into a graph."""
-    import_file = utility.CLI.args().import_file
-    ws = utility.CLI.args().workspace
-
-    imported_graph = nx.read_shp(path=import_file, simplify=True)
-    IO.Log.info('File \'{}\' imported correctly'.format(import_file))
-
-    if not ws:
-        IO.Log.warning('Please set workspace dir')
-        exit(1)
-
-    nx.write_shp(imported_graph, ws)
-    IO.Log.info('Exported correctly to \'{}\' nodes.shp and '
-                'edges.shp\n'.format(ws))
-    IO.Log.info('PLEASE ADD TO \'{}\' ELEVATION '
-                'INFORMATION !'.format(os.path.join(ws, 'nodes.shp')))
-    exit(0)
-
-
 def label_nodes(graph):
     """Ensure problem is applicable to graph and label nodes of interest."""
     problem_file = utility.CLI.args().problem_file
@@ -266,11 +165,11 @@ def label_nodes(graph):
         IO.Log.warning('Problem file not found ({})'.format(problem_file))
         exit(1)
 
-    with open(problem_file, 'r') as f:
-        problem = yaml.load(f)
+    problem = IO.load_yaml_file(problem_file)
 
     already_labeled_nodes = list()
-    depot_coor = (problem['depot']['latitude'], problem['depot']['longitude'])
+    depot_coor = (problem['depot'][0]['latitude'],
+                  problem['depot'][0]['longitude'])
     if depot_coor not in graph.nodes_iter():
         IO.Log.warning('Could not find depot {} in '
                        ' workspace'.format(depot_coor))
@@ -424,10 +323,10 @@ class CachePaths(object):
 # ----------------------------------- MAIN ---------------------------------- #
 
 if utility.CLI.args().import_file:
-    import_shapefile_to_workspace()  # <-- it always exits
+    IO.import_shapefile_to_workspace()  # <-- it always exits
 
 if utility.CLI.args().export_dir:
-    export_problem_to_directory()  # <-- it always exits
+    IO.export_problem_to_directory()  # <-- it always exits
 
 if utility.CLI.args().workspace is None:
     print('\nFirst of all import a shapefile (-i option) to a workspace '
@@ -436,7 +335,7 @@ if utility.CLI.args().workspace is None:
           '(with -w option)')
     exit(0)
 
-check_workspace()  # <-- it exits if workspace is not compliant
+IO.check_workspace()  # <-- it exits if workspace is not compliant
 
 osm_g = nx.read_shp(path=utility.CLI.args().workspace, simplify=True)
 label_nodes(osm_g)  # <-- it exits if problem file is not applicable to graph

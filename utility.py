@@ -134,5 +134,6 @@ class UsageException(Exception):
             message = ('\nFirst of all import a shapefile (-i option) to a '
                        'workspace directory (-w option)\n\n'
                        'Then run the program specifing the workspace to use '
-                       '(with -w option)\n')
+                       '(with -w option)\n\n'
+                       '(To print the help use -h option)')
         super(UsageException, self).__init__(message)

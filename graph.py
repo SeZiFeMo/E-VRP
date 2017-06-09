@@ -321,31 +321,19 @@ class CachePaths(object):
 
 
 # ----------------------------------- MAIN ---------------------------------- #
-
-if utility.CLI.args().import_file:
-    try:
-        IO.import_shapefile_to_workspace(exit_on_success=True)
-    except NameError as e:
-        print(str(e))
-        exit(1)
-
-if utility.CLI.args().export_dir:
-    try:
-        IO.export_problem_to_directory(exit_on_success=True)
-    except FileNotFoundError as e:
-        print(str(e))
-        exit(e.errno)
-
-if utility.CLI.args().workspace is None:
-    try:
-        raise utility.UsageException()
-    except utility.UsageException as e:
-        print(str(e))
-        exit(1)
-
 try:
+    if utility.CLI.args().import_file:
+        IO.import_shapefile_to_workspace(exit_on_success=True)
+    elif utility.CLI.args().export_dir:
+        IO.export_problem_to_directory(exit_on_success=True)
+    elif utility.CLI.args().workspace is None:
+        raise utility.UsageException()
+
     IO.check_workspace()
-except (FileExistsError, FileNotFoundError, NameError, TypeError) as e:
+except (FileExistsError, FileNotFoundError) as e:
+    print(str(e))
+    exit(e.errno)
+except (NameError, TypeError, utility.UsageException) as e:
     print(str(e))
     exit(1)
 

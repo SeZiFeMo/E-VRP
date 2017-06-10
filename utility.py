@@ -50,6 +50,18 @@ def check_python_version():
         return True
 
 
+def energy(rise, length, consumption, weight, **kwargs):
+    """Return energy spent to raise a car (in Joule).
+
+       Rise and length are measured in meters
+       consumption in kW⋅h/100km
+       weight in kilograms
+    """
+    theta = -2/3 if rise < 0 else 1
+    consumption *= 36000  # kW⋅h/100km  to  J/km
+    return consumption * length + theta * weight * 9.81 * rise
+
+
 class CLI(object):
 
     _args = None

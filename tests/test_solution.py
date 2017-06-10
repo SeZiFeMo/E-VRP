@@ -29,19 +29,33 @@ __copyright__ = "E-VRP  Copyright (C)  2017"
 __license__ = "GPL3"
 
 import unittest
+import networkx as nx
 
 from context import solution
 
-class test_solution_module(unittest.TestCase):
+class test_solution_class(unittest.TestCase):
     def setUp(self):
+        graph = nx.DiGraph()
         self.sol = solution.Solution()
 
     def test_is_feasible(self):
         self.assertTrue(self.sol.is_feasible())
 
-class test_route_module(unittest.TestCase):
+class test_route_class(unittest.TestCase):
     def setUp(self):
-        self.route = solution.Route()
+        self.graph = nx.DiGraph()
+        self.graph.add_node((16,48), {'altitude': 1, 'type': 'depot',
+                                      'longitude': 16, 'latitude': 48})
+        self.graph.add_node((17,49), {'altitude': 2, 'type': 'station',
+                                      'longitude': 17, 'latitude': 49})
+        self.graph.add_node((18,50), {'altitude': 3, 'type': 'customer',
+                                      'longitude': 18, 'latitude': 50})
+        self.graph.add_node((19,51), {'altitude': 4, 'type': '',
+                                      'longitude': 19, 'latitude': 51})
+        self.route = solution.Route(self.graph)
+
+    def test_create_route_with_nodes_list(self):
+        route = solution.Route(self.graph, [(16,48),(19,51)])
 
     def test_is_feasible(self):
         self.assertTrue(self.route.is_feasible())

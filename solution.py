@@ -30,11 +30,8 @@ __license__ = "GPL3"
 
 # ------------------------------ SCRIPT LOADED ------------------------------ #
 
-import IO
-
 if __name__ == '__main__':
-    IO.Log.warning('Please do not load that script, run it!')
-    exit(1)
+    raise SystemExit('Please do not load that script, run it!')
 
 
 class Solution(object):

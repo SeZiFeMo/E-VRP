@@ -27,27 +27,20 @@
 import argparse
 import sys
 
-import IO
-
 __authors__ = "Serena Ziviani, Federico Motta"
 __copyright__ = "E-VRP  Copyright (C)  2017"
 __license__ = "GPL3"
 
 # ------------------------------ SCRIPT LOADED ------------------------------ #
 if __name__ == '__main__':
-    IO.Log.warning('Please do not run that script, load it!')
-    exit(1)
+    SystemExit('Please do not run that script, load it!')
 
 
 def check_python_version():
     if sys.version_info < (3,):
         major, minor, *__ = sys.version_info
-        IO.Log.warning('You are using the Python interpreter {}.{}.\n'
-                       'Please use at least Python version 3!'.format(major,
-                                                                      minor))
-        exit(1)
-    else:
-        return True
+        SystemExit(f'You are using the Python interpreter {major}.{minor}.\n'
+                   'Please use at least Python version 3!')
 
 
 def energy(rise, length, consumption, weight, **kwargs):

@@ -30,16 +30,14 @@ __license__ = "GPL3"
 
 # -------------------------------- SCRIPT RUN ------------------------------- #
 if __name__ != '__main__':
-    print('Please do not load that script, run it!')
-    exit(1)
+    raise SystemExit('Please do not load that script, run it!')
 
 # Add to the following loop every external library used!
 for lib in ('matplotlib.pyplot as plt', 'networkx as nx', 'yaml'):
     try:
         exec('import ' + str(lib))
     except ImportError:
-        print('Could not import {} library, please install it!'.format(lib))
-        exit(1)
+        raise SystemExit(f'Could not import {lib} library, please install it!')
 
 import math
 import matplotlib.pyplot as plt

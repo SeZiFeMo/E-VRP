@@ -50,7 +50,7 @@ def energy(rise, length, consumption, weight, **kwargs):
        consumption in kW⋅h/100km
        weight in kilograms
     """
-    theta = -2/3 if rise < 0 else 1
+    theta = -2 / 3 if rise < 0 else 1
     consumption *= 36000  # kW⋅h/100km  to  J/km
     return consumption * length + theta * weight * 9.81 * rise
 

@@ -383,6 +383,7 @@ except (NameError, TypeError, utility.UsageException) as e:
     print(str(e))
     exit(1)
 
+
 try:
     osm_g = Graph(osm_shapefile=utility.CLI.args().workspace)
     osm_g.label_nodes()
@@ -392,6 +393,7 @@ try:
 except (NameError, RuntimeError, TypeError) as e:
     print(str(e))
     exit(2)
+
 
 # Usage example
 for coor, data in abstract_g.nodes_iter(data=True):

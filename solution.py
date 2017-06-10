@@ -73,6 +73,7 @@ class Route(object):
         """Check the feasibility of the entire Route."""
         return True
 
+
 class Path(object):
     """A path is a sequence of nodes visited in a given order."""
 

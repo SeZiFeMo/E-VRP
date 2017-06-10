@@ -150,21 +150,21 @@ def load_problem_file():
 
 class Log(object):
 
-    __default = 'critical' if utility.CLI.args().quiet >= 3 else \
-                'error' if utility.CLI.args().quiet == 2 else \
-                'warning' if utility.CLI.args().quiet == 1 else \
-                'debug' if utility.CLI.args().verbose else \
-                'info'
-    __initialized = False
-    __name = 'E-VRP'
+    _default = 'critical' if utility.CLI.args().quiet >= 3 else \
+               'error' if utility.CLI.args().quiet == 2 else \
+               'warning' if utility.CLI.args().quiet == 1 else \
+               'debug' if utility.CLI.args().verbose else \
+               'info'
+    _initialized = False
+    _name = 'E-VRP'
 
-    def __log(msg='', data=None, level=None):
+    def _log(msg='', data=None, level=None):
         """Print log message if above threshold."""
         if level is None:
-            level = Log.__default
+            level = Log._default
 
-        if not Log.__initialized:
-            logging_level = getattr(logging, Log.__default.upper())
+        if not Log._initialized:
+            logging_level = getattr(logging, Log._default.upper())
             logging.basicConfig(format='[%(levelname)-8s] %(message)s',
                                 level=logging_level)
             for l in logging.Logger.manager.loggerDict.keys():
@@ -172,10 +172,10 @@ class Log(object):
                 logging.getLogger(l).setLevel(logging.INFO)
 
             # current script / package logging
-            logging.getLogger(Log.__name).setLevel(logging_level)
-            Log.__initialized = True
+            logging.getLogger(Log._name).setLevel(logging_level)
+            Log._initialized = True
 
-        logger = getattr(logging.getLogger(Log.__name), level)
+        logger = getattr(logging.getLogger(Log._name), level)
         my_new_line = '\n[{:<8}]     '.format(level.upper())
         if data is None:
             logger(msg.replace('\n', my_new_line))
@@ -186,16 +186,16 @@ class Log(object):
                    data.replace('\n', my_new_line))
 
     def critical(msg='', data=None):
-        return Log.__log(msg=msg, data=data, level='critical')
+        return Log._log(msg=msg, data=data, level='critical')
 
     def debug(msg='', data=None):
-        return Log.__log(msg=msg, data=data, level='debug')
+        return Log._log(msg=msg, data=data, level='debug')
 
     def error(msg='', data=None):
-        return Log.__log(msg=msg, data=data, level='error')
+        return Log._log(msg=msg, data=data, level='error')
 
     def info(msg='', data=None):
-        return Log.__log(msg=msg, data=data, level='info')
+        return Log._log(msg=msg, data=data, level='info')
 
     def set_level(level):
         if not isinstance(level, str):
@@ -205,11 +205,11 @@ class Log(object):
         if level not in ('critical', 'debug', 'error', 'info', 'warning'):
             Log.error('Bad level ({}) in Log.set_level()'.format(level))
             return
-        Log.__default = level
-        Log.__initialized = False
+        Log._default = level
+        Log._initialized = False
 
     def warning(msg='', data=None):
-        return Log.__log(msg=msg, data=data, level='warning')
+        return Log._log(msg=msg, data=data, level='warning')
 
 
 # ------------------------------ SCRIPT LOADED ------------------------------ #

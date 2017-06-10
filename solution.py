@@ -76,16 +76,16 @@ class Route(object):
 class Path(object):
     """A path is a sequence of nodes visited in a given order."""
 
-    __graph = None
+    _graph = None
 
-    __nodes = None
+    _nodes = None
     """List of nodes, each node is a tuple: ( latitude, longitude, type )."""
 
     def __init__(self, graph, coor_list=None):
         """Initialize a path from a list of node coordinates."""
-        self.__saved = dict()
-        self.__graph = graph
-        self.__nodes = list()
+        self._saved = dict()
+        self._graph = graph
+        self._nodes = list()
         if coor_list is None:
             return
         for lat, lon in coor_list:
@@ -93,53 +93,54 @@ class Path(object):
 
     def __iter__(self):
         """Return iterator over tuple (latitude, longitude, type)."""
-        return iter(self.__nodes)
+        return iter(self._nodes)
 
     def __repr__(self):
-        return repr(self.__nodes)
+        return repr(self._nodes)
 
     def __str__(self):
-        return str(self.__nodes)
+        return str(self._nodes)
 
-    def __sum_over_label(self, label):
-        if label not in self.__saved:
-            s = sum([self.__graph.edge[src[:2]][self.__nodes[i + 1][:2]][label]
-                     for i, src in enumerate(self.__nodes[:-1])])
-            self.__saved[label] = s
-        return self.__saved[label]
+    def _sum_over_label(self, label):
+        if label not in self._saved:
+            s = sum([self._graph.edge[src[:2]][self._nodes[i + 1][:2]][label]
+                     for i, src in enumerate(self._nodes[:-1])])
+            self._saved[label] = s
+        return self._saved[label]
 
     def append(self, node_latitude, node_longitude, node_type):
         """Insert node in last position of the node list."""
-        self.__nodes.append((node_latitude, node_longitude, node_type))
+        self._nodes.append((node_latitude, node_longitude, node_type))
 
     @property
     def energy(self):
         """Sum of the energies of each edge between the nodes in the list."""
-        return self.__sum_over_label('energy')
+        return self._sum_over_label('energy')
 
     @property
     def length(self):
         """Sum of the lengths of each edge between the nodes in the list."""
-        return self.__sum_over_label('length')
+        return self._sum_over_label('length')
 
     def remove(self, node_latitude, node_longitude, node_type=''):
         """Remove from node list the specified node."""
-        for index, record in enumerate(self.__nodes):
+        for index, record in enumerate(self._nodes):
             if record[:2] == (node_latitude, node_longitude):
-                del self.__nodes[index]
+                del self._nodes[index]
 
     def substitute(self, old_lat, old_lon, new_lat, new_lon):
         """Replace the old node with the new one."""
-        for index, record in enumerate(self.__nodes):
+        for index, record in enumerate(self._nodes):
             if record[:2] == (old_lat, old_lon):
                 record = (new_lat, new_lon,
-                          self.__graph.node[(new_lat, new_lon)]['type'])
-                self.__nodes[index] = record
+                          self._graph.node[(new_lat, new_lon)]['type'])
+                self._nodes[index] = record
 
     @property
     def time(self):
         """Sum of the times of each edge between the nodes in the list."""
-        return self.__sum_over_label('time')
+        return self._sum_over_label('time')
+
 
 class UnfeasibleRouteException(Exception):
 

@@ -36,10 +36,11 @@ from context import solution
 class test_solution_class(unittest.TestCase):
     def setUp(self):
         graph = nx.DiGraph()
-        self.sol = solution.Solution()
+        self.sol = solution.Solution(graph)
 
     def test_is_feasible(self):
         self.assertTrue(self.sol.is_feasible())
+
 
 class test_route_class(unittest.TestCase):
     def setUp(self):
@@ -58,10 +59,31 @@ class test_route_class(unittest.TestCase):
         route = solution.Route(self.graph, [(16,48),(19,51)])
 
     def test_is_feasible(self):
-        self.assertTrue(self.route.is_feasible())
+        path = []
+        battery = []
+        self.assertTrue(self.route.is_feasible(path, battery))
+
+    def test_append_node(self):
+        node = (16, 48, 'depot')
+        self.route.append(node)
+        self.assertEqual(len(self.route._path._nodes), len(self.route._battery))
+
+    def test_remove_node(self):
+        node = (16, 48, 'depot')
+        self.route.append(node)
+        self.route.remove(node)
+        self.assertEqual(len(self.route._path._nodes), len(self.route._battery))
+
+    def test_substitute_node(self):
+        route = solution.Route(self.graph, [(16,48),(17,49)], [3, 3])
+        node1 = (16, 48, 'depot')
+        node2 = (17, 49, 'station')
+        route.substitute(node1, node2)
+        self.assertEqual(len(self.route._path._nodes), len(self.route._battery))
 
     def test_raise(self):
         self.assertRaises(solution.UnfeasibleRouteException, raiser)
+
 
 def raiser():
     raise solution.UnfeasibleRouteException('Exception tester')

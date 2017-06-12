@@ -30,13 +30,19 @@ __license__ = "GPL3"
 
 # ------------------------------ SCRIPT LOADED ------------------------------ #
 
+import copy
+
+import IO
+
 if __name__ == '__main__':
     raise SystemExit('Please do not load that script, run it!')
 
 
 class Solution(object):
+    """A Solution is a list of Routes."""
 
-    def __init__(self):
+    def __init__(self, graph):
+        self._graph = graph
         self.routes = []
 
     def is_feasible(self):
@@ -46,30 +52,70 @@ class Solution(object):
 class Route(object):
     """A Route is a path with some battery information for each node in it."""
 
-    path = None
-
-    battery = None
-
     def __init__(self, graph, coor_list=None, battery_list=None):
-        self.path = Path(graph, coor_list)
+        # FIXME check integrity betweeen coor_list and battery_list
+        # this means _at_least_ that len(coor_list) == len(battery_list)
+        try:
+            if len(coor_list) != len(battery_list):
+                IO.Log.error('Length of coordinates and battery list are different')
+                raise SystemExit()
+        except TypeError:
+            IO.Log.debug('No battery_list or no coor_list provided')
+
+        self._path = Path(graph, coor_list)
+        self._battery = []
+
+        if battery_list is not None:
+            for battery in battery_list:
+                self._battery.append(battery)
+        # FIXME calculate battery levels from path
         # self.battery = TODO implement a Battery class
 
     def append(self, node):  # TODO wrap and expand path.append()
-        if not self.is_feasible():
+        lat, lon, node_type = node
+        mod_path = copy.copy(self._path)
+        mod_battery = copy.copy(self._battery)
+        mod_path.append(lat, lon, node_type)
+        mod_battery.append(10)
+        # TODO compute battery information
+
+        if self.is_feasible(mod_path, mod_battery):
+            self._path = mod_path
+            self._battery = mod_battery
+        else:
             raise UnfeasibleRouteException(
                 f'Adding {node} creates a non-feasible route')
 
-    def remove(self, node):  # TODO wrap and expand path.remove
-        if not self.is_feasible():
+    def remove(self, node):
+        lat, lon, node_type = node
+        mod_path = copy.copy(self._path)
+        mod_battery = copy.copy(self._battery)
+        idx = mod_path.remove(lat, lon, node_type)
+        # FIXME calculate new battery level for _all_subsequent_ nodes
+        mod_battery.pop(idx)
+
+        if self.is_feasible(mod_path, mod_battery):
+            self._path = mod_path
+            self._battery = mod_battery
+        else:
             raise UnfeasibleRouteException(
                 f'Removing {node} creates a non-feasible route')
 
-    def substitute(self, node1, node2):  # TODO wrap and expand path.substitute
-        if not self.is_feasible():
+    def substitute(self, node1, node2):
+        mod_path = copy.copy(self._path)
+        mod_battery = copy.copy(self._battery)
+        idx = mod_path.substitute(node1[0], node1[1], node2[0], node2[1])
+        # FIXME calculate new battery level for this node and _all_subsequent's_
+        mod_battery[idx] = 5
+
+        if self.is_feasible(mod_path, mod_battery):
+            self._path = mod_path
+            self._battery = mod_battery
+        else:
             raise UnfeasibleRouteException(
                 f'Substituting {node1} with {node2} creates a non-feasible route')
 
-    def is_feasible(self):
+    def is_feasible(self, path, battery):
         """Check the feasibility of the entire Route."""
         return True
 
@@ -110,6 +156,7 @@ class Path(object):
         return self._saved[label]
 
     def append(self, node_latitude, node_longitude, node_type):
+        # FIXME invalidate the _sum_over_label cache
         """Insert node in last position of the node list."""
         self._nodes.append((node_latitude, node_longitude, node_type))
 
@@ -124,18 +171,22 @@ class Path(object):
         return self._sum_over_label('length')
 
     def remove(self, node_latitude, node_longitude, node_type=''):
-        """Remove from node list the specified node."""
+        # FIXME invalidate the _sum_over_label cache
+        """Remove from node list the first occurrence of the specified node."""
         for index, record in enumerate(self._nodes):
             if record[:2] == (node_latitude, node_longitude):
                 del self._nodes[index]
+                return index
 
     def substitute(self, old_lat, old_lon, new_lat, new_lon):
-        """Replace the old node with the new one."""
+        # FIXME invalidate the _sum_over_label cache
+        """Replace the first occurrence of the old node with a new one."""
         for index, record in enumerate(self._nodes):
             if record[:2] == (old_lat, old_lon):
                 record = (new_lat, new_lon,
                           self._graph.node[(new_lat, new_lon)]['type'])
                 self._nodes[index] = record
+                return index
 
     @property
     def time(self):

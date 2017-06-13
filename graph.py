@@ -29,8 +29,6 @@ __copyright__ = "E-VRP  Copyright (C)  2017"
 __license__ = "GPL3"
 
 # -------------------------------- SCRIPT RUN ------------------------------- #
-if __name__ != '__main__':
-    raise SystemExit('Please do not load that script, run it!')
 
 # Add to the following loop every external library used!
 for lib in ('matplotlib.pyplot as plt', 'networkx as nx', 'yaml'):
@@ -375,46 +373,47 @@ class CachePaths(object):
 
 
 # ----------------------------------- MAIN ---------------------------------- #
-try:
-    if utility.CLI.args().import_file:
-        IO.import_shapefile_to_workspace(exit_on_success=True)
-    elif utility.CLI.args().export_dir:
-        IO.export_problem_to_directory(exit_on_success=True)
-    elif utility.CLI.args().workspace is None:
-        raise utility.UsageException()
+if __name__ == '__main__':
+    try:
+        if utility.CLI.args().import_file:
+            IO.import_shapefile_to_workspace(exit_on_success=True)
+        elif utility.CLI.args().export_dir:
+            IO.export_problem_to_directory(exit_on_success=True)
+        elif utility.CLI.args().workspace is None:
+            raise utility.UsageException()
 
-    IO.check_workspace()
-except (FileExistsError, FileNotFoundError) as e:
-    print(str(e))
-    exit(e.errno)
-except (NameError, TypeError, utility.UsageException) as e:
-    print(str(e))
-    exit(1)
-
-
-try:
-    osm_g = Graph(osm_shapefile=utility.CLI.args().workspace)
-    osm_g.label_nodes()
-    osm_g.check_problem_solvability()
-
-    abstract_g = Graph(from_DiGraph=osm_g)
-except (NameError, RuntimeError, TypeError) as e:
-    print(str(e))
-    exit(2)
+        IO.check_workspace()
+    except (FileExistsError, FileNotFoundError) as e:
+        print(str(e))
+        exit(e.errno)
+    except (NameError, TypeError, utility.UsageException) as e:
+        print(str(e))
+        exit(1)
 
 
-# Usage example
-for coor, data in abstract_g.nodes_iter(data=True):
-    if data['type'] == 'depot':
-        # iterate over path starting from depot
-        for dest, green, short in CachePaths(abstract_g).source_iterator(coor):
-            print(f'shortest path:  (length: {short.length}, '
-                  f'energy: {short.energy}, time: {short.time})')
-            for node in short:
-                print('\tlat: {:2.7f}, lon: {:2.7f}, type: {}'.format(*node))
+    try:
+        osm_g = Graph(osm_shapefile=utility.CLI.args().workspace)
+        osm_g.label_nodes()
+        osm_g.check_problem_solvability()
 
-            print(f'greenest path:  (length: {green.length}, '
-                  f'energy: {green.energy}, time: {green.time})')
-            for node in green:
-                print('\tlat: {:2.7f}, lon: {:2.7f}, type: {}'.format(*node))
-            print('#' * 80)
+        abstract_g = Graph(from_DiGraph=osm_g)
+    except (NameError, RuntimeError, TypeError) as e:
+        print(str(e))
+        exit(2)
+
+
+    # Usage example
+    for coor, data in abstract_g.nodes_iter(data=True):
+        if data['type'] == 'depot':
+            # iterate over path starting from depot
+            for dest, green, short in CachePaths(abstract_g).source_iterator(coor):
+                print(f'shortest path:  (length: {short.length}, '
+                      f'energy: {short.energy}, time: {short.time})')
+                for node in short:
+                    print('\tlat: {:2.7f}, lon: {:2.7f}, type: {}'.format(*node))
+
+                print(f'greenest path:  (length: {green.length}, '
+                      f'energy: {green.energy}, time: {green.time})')
+                for node in green:
+                    print('\tlat: {:2.7f}, lon: {:2.7f}, type: {}'.format(*node))
+                print('#' * 80)

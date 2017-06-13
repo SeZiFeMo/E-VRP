@@ -175,6 +175,10 @@ class Graph(nx.classes.digraph.DiGraph):
         """Return list of stations coordinates or raises AttributeError."""
         return self._nodes_of_interests('station')
 
+    def edge(self, node_src, node_dest):
+        """Return properties of edge between src and dest nodes."""
+        return super(Graph, self)[node_src][node_dest]
+
     def assert_graph_is_osm(self, method_name):
         """Raise TypeError is self is not an OpenStreetMap graph."""
         if self.name != Graph._osm_name:
@@ -289,9 +293,9 @@ class CachePaths(object):
         record = (src, dest,
                   solution.Path(graph, greenest),
                   solution.Path(graph, shortest))
-        for index, tup in enumerate(self._cache):
+        for index, (s, d, *_) in enumerate(self._cache):
             # update record if already existing
-            if tup[0:2] == (src, dest):
+            if (s, d) == (src, dest):
                 self._cache[index] = record
                 return
         else:

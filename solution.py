@@ -192,12 +192,5 @@ class Path(object):
 
 
 class UnfeasibleRouteException(Exception):
-
-    def __init__(self, msg):
-        self._msg = msg
-        Exception.__init__(self, msg)
-
-    def __repr__(self):
-        return self._msg
-
-    __str__ = __repr__
+    """Route does not satisfy problem constraints."""
+    pass

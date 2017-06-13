@@ -41,10 +41,10 @@ def check_workspace():
     """Ensure workspace exist and it contains only necessary files.
 
        Otherwise it could raise:
-           - FileExistsError
-           - FileNotFoundError
-           - NameError
-           - TypeError
+       - FileExistsError
+       - FileNotFoundError
+       - NameError
+       - TypeError
     """
     ws = utility.CLI.args().workspace
     if not os.path.isdir(ws):

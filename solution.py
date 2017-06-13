@@ -43,7 +43,7 @@ class Solution(object):
 
     def __init__(self, graph):
         self._graph = graph
-        self.routes = []
+        self.routes = list()
 
     def is_feasible(self):
         return all([route.is_feasible() for route in self.routes])
@@ -57,13 +57,14 @@ class Route(object):
         # this means _at_least_ that len(coor_list) == len(battery_list)
         try:
             if len(coor_list) != len(battery_list):
-                IO.Log.error('Length of coordinates and battery list are different')
+                IO.Log.error('Length of coordinates and battery '
+                             'list are different')
                 raise SystemExit()
         except TypeError:
             IO.Log.debug('No battery_list or no coor_list provided')
 
         self._path = Path(graph, coor_list)
-        self._battery = []
+        self._battery = list()
 
         if battery_list is not None:
             for battery in battery_list:
@@ -83,8 +84,8 @@ class Route(object):
             self._path = mod_path
             self._battery = mod_battery
         else:
-            raise UnfeasibleRouteException(
-                f'Adding {node} creates a non-feasible route')
+            raise UnfeasibleRouteException(f'Adding {node} creates a '
+                                           'non-feasible route')
 
     def remove(self, node):
         lat, lon, node_type = node
@@ -98,22 +99,23 @@ class Route(object):
             self._path = mod_path
             self._battery = mod_battery
         else:
-            raise UnfeasibleRouteException(
-                f'Removing {node} creates a non-feasible route')
+            raise UnfeasibleRouteException(f'Removing {node} creates a '
+                                           'non-feasible route')
 
     def substitute(self, node1, node2):
         mod_path = copy.copy(self._path)
         mod_battery = copy.copy(self._battery)
         idx = mod_path.substitute(node1[0], node1[1], node2[0], node2[1])
-        # FIXME calculate new battery level for this node and _all_subsequent's_
+        # FIXME calculate new battery level for this node and
+        # _all_subsequent's_
         mod_battery[idx] = 5
 
         if self.is_feasible(mod_path, mod_battery):
             self._path = mod_path
             self._battery = mod_battery
         else:
-            raise UnfeasibleRouteException(
-                f'Substituting {node1} with {node2} creates a non-feasible route')
+            raise UnfeasibleRouteException(f'Substituting {node1} with {node2}'
+                                           ' creates a non-feasible route')
 
     def is_feasible(self, path, battery):
         """Check the feasibility of the entire Route."""
@@ -123,20 +125,15 @@ class Route(object):
 class Path(object):
     """A path is a sequence of nodes visited in a given order."""
 
-    _graph = None
-
-    _nodes = None
-    """List of nodes, each node is a tuple: ( latitude, longitude, type )."""
-
     def __init__(self, graph, coor_list=None):
         """Initialize a path from a list of node coordinates."""
-        self._saved = dict()
         self._graph = graph
-        self._nodes = list()
-        if coor_list is None:
-            return
-        for lat, lon in coor_list:
-            self.append(lat, lon, graph.node[(lat, lon)]['type'])
+        self._nodes = list()  # each item will be a tuple: ( lat, long, type )
+        self._saved = dict()  # empty cache for energy, length and time values
+
+        if coor_list is not None:
+            for lat, lon in coor_list:
+                self.append(lat, lon)
 
     def __iter__(self):
         """Return iterator over tuple (latitude, longitude, type)."""
@@ -155,11 +152,6 @@ class Path(object):
             self._saved[label] = s
         return self._saved[label]
 
-    def append(self, node_latitude, node_longitude, node_type):
-        # FIXME invalidate the _sum_over_label cache
-        """Insert node in last position of the node list."""
-        self._nodes.append((node_latitude, node_longitude, node_type))
-
     @property
     def energy(self):
         """Sum of the energies of each edge between the nodes in the list."""
@@ -170,28 +162,33 @@ class Path(object):
         """Sum of the lengths of each edge between the nodes in the list."""
         return self._sum_over_label('length')
 
-    def remove(self, node_latitude, node_longitude, node_type=''):
-        # FIXME invalidate the _sum_over_label cache
-        """Remove from node list the first occurrence of the specified node."""
-        for index, record in enumerate(self._nodes):
-            if record[:2] == (node_latitude, node_longitude):
-                del self._nodes[index]
-                return index
-
-    def substitute(self, old_lat, old_lon, new_lat, new_lon):
-        # FIXME invalidate the _sum_over_label cache
-        """Replace the first occurrence of the old node with a new one."""
-        for index, record in enumerate(self._nodes):
-            if record[:2] == (old_lat, old_lon):
-                record = (new_lat, new_lon,
-                          self._graph.node[(new_lat, new_lon)]['type'])
-                self._nodes[index] = record
-                return index
-
     @property
     def time(self):
         """Sum of the times of each edge between the nodes in the list."""
         return self._sum_over_label('time')
+
+    def append(self, node_latitude, node_longitude, node_type):
+        """Insert node in last position of the node list."""
+        self._nodes.append((node_latitude, node_longitude, node_type))
+        self._saved = dict()  # invalidate cached energy, length and time
+
+    def remove(self, node_latitude, node_longitude, node_type=''):
+        """Remove from node list the first occurrence of the specified node."""
+        for index, (lat, lon, _) in enumerate(self._nodes):
+            if (lat, lon) == (node_latitude, node_longitude):
+                self._saved = dict()  # invalidate cached properties
+                del self._nodes[index]
+                return index
+
+    def substitute(self, old_lat, old_lon, new_lat, new_lon):
+        """Replace the first occurrence of the old node with a new one."""
+        for index, (lat, lon, _) in enumerate(self._nodes):
+            if (lat, lon) == (old_lat, old_lon):
+                self._saved = dict()  # invalidate cached properties
+                record = (new_lat, new_lon,
+                          self._graph.node[(new_lat, new_lon)]['type'])
+                self._nodes[index] = record
+                return index
 
 
 class UnfeasibleRouteException(Exception):

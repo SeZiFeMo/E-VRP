@@ -70,8 +70,6 @@ class Graph(nx.classes.digraph.DiGraph):
         path = kwargs['osm_shapefile'] if 'osm_shapefile' in kwargs else ''
         osm_g = kwargs['from_DiGraph'] if 'from_DiGraph' in kwargs else None
 
-        print(f'path: {path}, osm_g: {osm_g}')
-
         if isinstance(path, str) and path != '' and osm_g is None:
             super(Graph, self).__init__(data=nx.read_shp(path=path,
                                                          simplify=True),

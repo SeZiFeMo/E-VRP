@@ -286,13 +286,13 @@ class CachePaths(object):
        where greenest_path and shortest_path are objects of type Path.
     """
 
-    def _add(self, graph, src, dest, greenest, shortest):
+    def _add(self, src, dest, greenest, shortest):
         """Append to cache two new paths between src and dest."""
         if src == dest:
             return
         record = (src, dest,
-                  solution.Path(graph, greenest),
-                  solution.Path(graph, shortest))
+                  solution.Path(self.graph, greenest),
+                  solution.Path(self.graph, shortest))
         for index, (s, d, *_) in enumerate(self._cache):
             # update record if already existing
             if (s, d) == (src, dest):
@@ -304,6 +304,7 @@ class CachePaths(object):
     def __init__(self, graph, type_whitelist=('depot', 'customer', 'station')):
         """Compute shortest and most efficient path."""
         self._cache = list()
+        self._graph = graph
 
         # from each depot, customer, station ...
         for src_node, src_data in graph.nodes_iter(data=True):
@@ -332,16 +333,13 @@ class CachePaths(object):
                             node_to_add = g_pred[node_to_add]
                         greenest_path = list(reversed(greenest_path))
 
-                        self._add(graph, src_node, dest_node,
+                        self._add(src_node, dest_node,
                                   greenest_path, shortest_path[dest_node])
 
-    def destination_iterator(self, dest):
-        """Return iterator over cached records ending in dest.
-
-           Destination is omitted from records.
-        """
-        return iter([(src, green, short)
-                     for src, d, green, short in self._cache if d == dest])
+    @property
+    def graph(self):
+        """Return pointer to graph instance."""
+        return self._graph
 
     def greenest(self, src, dest):
         """Return greenest Path between src and dest."""
@@ -358,6 +356,14 @@ class CachePaths(object):
                 return shortest
         raise nx.exception.NetworkxNoPath('No greenest path found between '
                                           '{} and {}'.format(src, dest))
+
+    def destination_iterator(self, dest):
+        """Return iterator over cached records ending in dest.
+
+           Destination is omitted from records.
+        """
+        return iter([(src, green, short)
+                     for src, d, green, short in self._cache if d == dest])
 
     def source_iterator(self, src):
         """Return iterator over cached records starting from src.

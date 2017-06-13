@@ -31,6 +31,7 @@ __license__ = "GPL3"
 # ------------------------------ SCRIPT LOADED ------------------------------ #
 
 import copy
+import networkx as nx
 
 import IO
 
@@ -50,79 +51,180 @@ class Solution(object):
 
 
 class Route(object):
-    """A Route is a path with some battery information for each node in it."""
+    """A Route is a list of Path with the tail-head nodes in common.
 
-    def __init__(self, graph, coor_list=None, battery_list=None):
-        self._graph = graph
-        self._time_limit = IO.load_problem_file()['time_limit']
+       Example: [ Path_from_A_to_B,
+                  Path_from_B_to_C,
+                  Path_from_C_to_D,
+                        ...
+                  Path_from_L_to_M ]
 
-        # FIXME check integrity betweeen coor_list and battery_list
-        # this means _at_least_ that len(coor_list) == len(battery_list)
+       For each tail-node (in the example: B, C, D, ... M) of a Path
+       a battery instance stores energy level/progress/history.
+    """
+
+    def __init__(self, graph_cache, greenest=False, shortest=False):
+        """Raises ValueError if flag are not opposite."""
+        if bool(greenest) == bool(shortest):
+            raise ValueError('Please set either greenest or shortest flag')
+        self.greenest, self.shortest = bool(greenest), bool(shortest)
+
+        self._graph_cache = graph_cache
+        self._paths, self._batteries = list(), list()
+        self.time_limit = IO.load_problem_file()['time_limit']
+
+    def append(self, dest_node):
+        """Add to route the path to reach dest_node from previous last node.
+
+           Example:
+           route = [ Path_from_A_to_B, ... Path_from_L_to_M ]
+           route.append(coor_of_node_N)
+           route = [ Path_from_A_to_B, ... Path_from_L_to_M, Path_from_M_to_N ]
+
+           Raises:
+           - UnfeasibleRouteException (without modifing current route)
+           - ValueError if nor greenest or shortest flags is set
+        """
+        path = self.default_path(self.last_node(with_type=False), dest_node)
+
+        if path.time + sum(p.time for p in self._paths) > self.time_limit:
+            raise UnfeasibleRouteException('Time limit exceeeded')
+
+        batt = copy.copy(self.last_battery())
+        batt.charge -= path.energy  # could raise UnfeasibleRouteException
+
+        # it's safe to append path to route because it's feasible
+        self._paths.append(path)
+        self._batteries.append(batt)
+
+    def remove(self, rm_node):
+        """Remove the first path ending with node and the next one.
+
+           Example:
+           route = [ Path_from_A_to_B, Path_from_B_to_C, ... Path_from_L_to_M ]
+           route.remove(coor_of_node_B)
+           route = [ Path_from_A_to_C, ... Path_from_L_to_M ]
+
+           Raises:
+           - UnfeasibleRouteException (without modifing current route)
+           - ValueError if nor greenest or shortest flags is set
+        """
         try:
-            if len(coor_list) != len(battery_list):
-                IO.Log.error('Length of coordinates and battery '
-                             'list are different')
-                raise SystemExit()
-        except TypeError:
-            IO.Log.debug('No battery_list or no coor_list provided')
+            idx = next(index for index, path in enumerate(self._paths)
+                       if path.last_node() == rm_node[:2])
+        except StopIteration:
+            # rm_node not found in self._paths
+            return
 
-        self._path = Path(graph, coor_list)
-        self._battery = list()
+        nodes_to_append = [p.last_node() for p in self._paths[idx:]]
 
-        if battery_list is not None:
-            for battery in battery_list:
-                self._battery.append(battery)
-        # FIXME calculate battery levels from path
-        # self.battery = TODO implement a Battery class
+        # backup and cut paths and batteries
+        path_bkp, batt_bkp = copy.copy(self._paths), copy.copy(self._batteries)
+        self._paths, self._batteries = self._paths[:idx], self._batteries[:idx]
 
-    def append(self, node):  # TODO wrap and expand path.append()
-        lat, lon, node_type = node
-        mod_path = copy.copy(self._path)
-        mod_battery = copy.copy(self._battery)
-        mod_path.append(lat, lon, node_type)
-        mod_battery.append(10)
-        # TODO compute battery information
+        try:
+            for coor in nodes_to_append:
+                self.append(coor)
+        except UnfeasibleRouteException as e:
+            self._paths, self._batteries = path_bkp, batt_bkp
+            raise e
 
-        if self.is_feasible(mod_path, mod_battery):
-            self._path = mod_path
-            self._battery = mod_battery
-        else:
-            raise UnfeasibleRouteException(f'Adding {node} creates a '
-                                           'non-feasible route')
+    def substitute(self, old_node, new_node):
+        """Substitute the first path ending with old_node and the next one.
 
-    def remove(self, node):
-        lat, lon, node_type = node
-        mod_path = copy.copy(self._path)
-        mod_battery = copy.copy(self._battery)
-        idx = mod_path.remove(lat, lon, node_type)
-        # FIXME calculate new battery level for _all_subsequent_ nodes
-        mod_battery.pop(idx)
+           Example:
+           route = [ Path_from_A_to_B, Path_from_B_to_C, ... Path_from_L_to_M ]
+           route.substitute(coor_of_node_B, coor_of_S)
+           route = [ Path_from_A_to_S, Path_from_S_to_C, ... Path_from_L_to_M ]
 
-        if self.is_feasible(mod_path, mod_battery):
-            self._path = mod_path
-            self._battery = mod_battery
-        else:
-            raise UnfeasibleRouteException(f'Removing {node} creates a '
-                                           'non-feasible route')
+           Raises:
+           - UnfeasibleRouteException (without modifing current route)
+           - ValueError if new_node is already in route
+        """
+        try:
+            idx = next(index for index, path in enumerate(self._paths)
+                       if path.last_node() == old_node[:2])
+        except StopIteration:
+            # old_node not found in self._paths
+            return
 
-    def substitute(self, node1, node2):
-        mod_path = copy.copy(self._path)
-        mod_battery = copy.copy(self._battery)
-        idx = mod_path.substitute(node1[0], node1[1], node2[0], node2[1])
-        # FIXME calculate new battery level for this node and
-        # _all_subsequent's_
-        mod_battery[idx] = 5
+        nodes_to_append = [p.last_node() for p in self._paths[idx:]]
 
-        if self.is_feasible(mod_path, mod_battery):
-            self._path = mod_path
-            self._battery = mod_battery
-        else:
-            raise UnfeasibleRouteException(f'Substituting {node1} with {node2}'
-                                           ' creates a non-feasible route')
+        if new_node in nodes_to_append:
+            raise ValueError('Could not substitute node with another one '
+                             'already in route')
 
-    def is_feasible(self, path, battery):
-        """Check the feasibility of the entire Route."""
+        # backup and cut paths and batteries
+        path_bkp, batt_bkp = copy.copy(self._paths), copy.copy(self._batteries)
+        self._paths, self._batteries = self._paths[:idx], self._batteries[:idx]
+
+        try:
+            for coor in [new_node] + nodes_to_append:
+                self.append(coor)
+        except UnfeasibleRouteException as e:
+            self._paths, self._batteries = path_bkp, batt_bkp
+            raise e
+
+    def is_feasible(self, paths, batteries):
+        """Return if Route feasibility check is passed.
+
+           Otherwise raises UnfeasibleRouteException
+        """
+        time_test = 0
+        batt_test = Battery()
+        for i, (*src, src_type) in enumerate(paths[:-1]):
+            *dest, dest_type = paths[i + 1]
+            path = self.default_path(src, dest)
+
+            batt_test.charge -= path.energy
+            time_test += path.time
+
+            # if energy sum is not zero a charge might have happened
+            e_sum = batteries[i + 1].charge - batteries[i].charg + path.energy
+            if abs(e_sum) > 0 and dest_type == 'station':
+                time_test += batt_test.recharge_until(batteries[i + 1].charge)
+            elif abs(e_sum) > 0:
+                raise UnfeasibleRouteException('Could not charge battery '
+                                               'outside stations')
+
+            if time_test > self.time_limit:
+                raise UnfeasibleRouteException('Time limit exceeded')
         return True
+
+    def last_battery(self):
+        """Return battery status at last reached node.
+
+           A full battery is returned on empty route.
+        """
+        if not self._batteries:
+            return Battery()
+        return self._batteries[-1]
+
+    def last_node(self, with_type=True):
+        """Return (latitude, longitude, type) of last reached node.
+
+           Depot is returned on empty route.
+        """
+        if not self._paths:
+            return self._graph_cache.graph().depot
+        return self._paths[-1].last_node(with_type=with_type)
+
+    def default_path(self, src_node, dest_node):
+        """Return greenest or shortest path between src and dest.
+
+           Raises:
+           - UnfeasibleRouteException if there is no path between src and dest
+           - ValueError if nor greenest or shortest flags is set
+        """
+        try:
+            if self.greenest:
+                return self._graph_cache.greenest(src_node, dest_node)
+            elif self.shortest:
+                return self._graph_cache.shortest(src_node, dest_node)
+            else:
+                raise ValueError('Both greenest and shortest flag are off')
+        except nx.exception.NetworkxNoPath as e:
+            raise UnfeasibleRouteException(str(e))
 
 
 class Path(object):
@@ -196,6 +298,30 @@ class Path(object):
                 self._nodes[index] = record
                 return index
 
+    def first_node(self, with_type=False):
+        """Return first item or nodes.
+
+           Raises IndexError if path is empty
+        """
+        if not self._nodes:
+            raise IndexError('Could not get first node from empty path')
+        if with_type:
+            return self._nodes[0]
+        else:
+            return self._nodes[0][:2]
+
+    def last_node(self, with_type=False):
+        """Return first item or nodes.
+
+           Raises IndexError if path is empty
+        """
+        if not self._nodes:
+            raise IndexError('Could not get last node from empty path')
+        if with_type:
+            return self._nodes[-1]
+        else:
+            return self._nodes[-1][:2]
+
 
 class Battery(object):
 
@@ -268,16 +394,16 @@ class Battery(object):
             return (energy_2 - energy_1) / self._charge_rate
 
 
-class BatteryCriticalException(Exception):
+class UnfeasibleRouteException(Exception):
+    """Route does not satisfy problem constraints."""
+    pass
+
+
+class BatteryCriticalException(UnfeasibleRouteException):
     """Battery reached critical percentage threshold."""
     pass
 
 
-class InsufficientBatteryException(Exception):
+class InsufficientBatteryException(UnfeasibleRouteException):
     """Battery capacity is not enough to satisfy requested amount of energy."""
-    pass
-
-
-class UnfeasibleRouteException(Exception):
-    """Route does not satisfy problem constraints."""
     pass

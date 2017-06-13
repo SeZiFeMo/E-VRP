@@ -53,6 +53,9 @@ class Route(object):
     """A Route is a path with some battery information for each node in it."""
 
     def __init__(self, graph, coor_list=None, battery_list=None):
+        self._graph = graph
+        self._time_limit = IO.load_problem_file()['time_limit']
+
         # FIXME check integrity betweeen coor_list and battery_list
         # this means _at_least_ that len(coor_list) == len(battery_list)
         try:
@@ -167,8 +170,11 @@ class Path(object):
         """Sum of the times of each edge between the nodes in the list."""
         return self._sum_over_label('time')
 
-    def append(self, node_latitude, node_longitude, node_type):
+    def append(self, node_latitude, node_longitude, node_type=None):
         """Insert node in last position of the node list."""
+        if node_type is None:
+            node_type = self._graph.node[(node_latitude,
+                                          node_longitude)]['type']
         self._nodes.append((node_latitude, node_longitude, node_type))
         self._saved = dict()  # invalidate cached energy, length and time
 
@@ -189,6 +195,87 @@ class Path(object):
                           self._graph.node[(new_lat, new_lon)]['type'])
                 self._nodes[index] = record
                 return index
+
+
+class Battery(object):
+
+    def __init__(self):
+        car = IO.load_problem_file()['car']
+        self._total_energy = car['battery']  # kW·h
+        self._total_energy *= 3.6 * 10 ** 6  # Joule
+        self._charge = self._total_energy    # Joule
+        self._critical = 0.20  # percentage
+
+        energy = car['ccs_charge']['percentage']
+        if energy > 1 and energy <= 100:
+            # normalize energy variable
+            energy /= 100
+        elif not (energy > 0 and energy <= 1):
+            raise ValueError('Bad percentage in car ccs_charge')
+        energy *= self._total_energy  # car['ccs_charge']['%'] in Joule
+
+        time = car['ccs_charge']['time'] * 60  # from hours to minutes
+        self._charge_rate = energy / time  # Joule / minute
+
+    @property
+    def charge(self):
+        """Energy available in Joule."""
+        return self._charge
+
+    @charge.setter
+    def x(self, new_energy):
+        """Modify charge value."""
+        if new_energy <= self._critical * self._total_energy:
+            raise BatteryCriticalException()
+        self._charge = min(self._total_energy, new_energy)
+
+    def recharge_until(self, asked_energy):
+        """Return time (min) to charge battery until asked energy is available.
+
+           Raises InsufficientBatteryException.
+        """
+        if asked_energy <= 0:
+            return 0
+        elif asked_energy > (1 - self._critical) * self._total_energy + 1e4:
+            raise InsufficientBatteryException()
+        self.charge += asked_energy
+        return asked_energy / self._charge_rate
+
+    def recharge(self, percentage=0.8):
+        """Return time (min) to charge until % of total energy is available.
+
+           Raises InsufficientBatteryException, ValueError.
+        """
+        if percentage <= self._critical or percentage > 1 + 1e-6:
+            raise ValueError(f'Out of bound percentage level ({percentage})')
+        asked_energy = self._total_energy * percentage - self._charge
+        return self.recharge_until(asked_energy)
+
+    def time_elapsed(self, energy_1, energy_2):
+        """Return time (min) to charge from energy_1 to energy_2.
+
+           Raises ValueError.
+
+           Note: internal state of battery is not changed.
+        """
+        for e in (energy_1, energy_2):
+            if e <= 1e-6 or e >= self._total_energy + 1e-6:
+                raise ValueError('Energy argument out of battery bounds')
+
+        if energy_1 >= energy_2:
+            return 0
+        else:
+            return (energy_2 - energy_1) / self._charge_rate
+
+
+class BatteryCriticalException(Exception):
+    """Battery reached critical percentage threshold."""
+    pass
+
+
+class InsufficientBatteryException(Exception):
+    """Battery capacity is not enough to satisfy requested amount of energy."""
+    pass
 
 
 class UnfeasibleRouteException(Exception):

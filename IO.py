@@ -135,17 +135,19 @@ def import_shapefile_to_workspace(exit_on_success=False):
         raise SystemExit(0)
 
 
-def load_problem_file():
+def load_problem_file(_cache={}):
     """Parse problem file content and return it.
 
        Raises FileNotFoundError.
     """
     problem_file = utility.CLI.args().problem_file
-    if not os.path.isfile(problem_file):
-        raise FileNotFoundError(errno.ENOENT,
-                                f'Problem file not found ({problem_file})')
-    with open(problem_file, 'r') as f:
-        return yaml.load(f)
+    if problem_file not in _cache:
+        if not os.path.isfile(problem_file):
+            raise FileNotFoundError(errno.ENOENT,
+                                    f'Problem file not found ({problem_file})')
+        with open(problem_file, 'r') as f:
+            _cache[problem_file] = yaml.load(f)
+    return _cache[problem_file]
 
 
 class Log(object):

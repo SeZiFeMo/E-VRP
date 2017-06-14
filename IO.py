@@ -63,15 +63,15 @@ def check_workspace():
 
     # check each node has an altitude attribute
     altitude = utility.CLI.args().altitude
-    for node, data in graph_read.nodes_iter(data=True):
+    for (lon, lat), data in graph_read.nodes_iter(data=True):
         if altitude not in data:
             raise NameError(f'Could not find \'{altitude}\' attribute in '
                             'nodes.shp')
 
         # check each altitude attribute is a floating point number
         if not isinstance(data[altitude], float):
-            raise TypeError('Altitude of node lat: {}, lon {} is not a '
-                            'float'.format(*node))
+            raise TypeError(f'Altitude of node lat: {lat}, lon {lon} '
+                            'is not a float')
 
     for f in os.listdir(ws):
         if f not in [prefix + suffix
@@ -93,15 +93,14 @@ def export_problem_to_directory(exit_on_success=False):
         os.makedirs(export_dir)
 
     temp_graph = nx.DiGraph()
-    temp_graph.add_node((problem['depot'][0]['latitude'],
-                         problem['depot'][0]['longitude']))
+    temp_graph.add_node((problem['depot'][0]['longitude'],
+                         problem['depot'][0]['latitude']))
     nx.write_shp(temp_graph, os.path.join(export_dir, 'depot.shp'))
 
     for node_type in ('customers', 'stations'):
         temp_graph = nx.DiGraph()
         for node in problem[node_type]:
-            temp_graph.add_node((node['latitude'],
-                                 node['longitude']))
+            temp_graph.add_node((node['longitude'], node['latitude']))
         nx.write_shp(temp_graph, os.path.join(export_dir, node_type + '.shp'))
 
     for ext in ('dbf', 'shp', 'shx'):
@@ -122,7 +121,7 @@ def import_shapefile_to_workspace(exit_on_success=False):
     ws = utility.CLI.args().workspace
 
     imported_graph = nx.read_shp(path=import_file, simplify=True)
-    Log.info('File \'{}\' imported correctly'.format(import_file))
+    Log.info(f'File \'{import_file}\' imported correctly')
 
     if not ws:
         raise NameError('Please set workspace dir')

@@ -42,12 +42,24 @@ if __name__ == '__main__':
 class Solution(object):
     """A Solution is a list of Routes."""
 
-    def __init__(self, graph):
+    def __init__(self, graph, graph_cache=None):  # TODO remove '=None' here
+        self._graph_cache = graph_cache
         self._graph = graph
         self.routes = list()
 
     def is_feasible(self):
+        """Return if all routes are feasibile.
+
+           Otherwise raises UnfeasibleRouteException
+        """
         return all([route.is_feasible() for route in self.routes])
+
+    def missing_customers(self):
+        """Return set of missing customers."""
+        customers_left = set(self._graph.customers)
+        for route in self.routes:
+            customers_left.difference_update(route.visited_customers())
+        return customers_left
 
 
 class Route(object):
@@ -190,6 +202,11 @@ class Route(object):
             if time_test > self.time_limit:
                 raise UnfeasibleRouteException('Time limit exceeded')
         return True
+
+    def visited_customers(self):
+        """Return set of visited customers."""
+        return {path.last_node() for path in self._paths
+                if path.last_node(with_type=True)[2] == 'customer'}
 
     def last_battery(self):
         """Return battery status at last reached node.

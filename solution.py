@@ -48,10 +48,7 @@ class Solution(object):
         self.routes = list()
 
     def is_feasible(self):
-        """Return if all routes are feasibile.
-
-           Otherwise raises UnfeasibleRouteException
-        """
+        """Return if all routes are feasibile."""
         return all([route.is_feasible() for route in self.routes])
 
     def missing_customers(self):
@@ -88,16 +85,18 @@ class Route(object):
     def append(self, dest_node):
         """Add to route the path to reach dest_node from previous last node.
 
+           dest_node is a tuple of three elements: (latitude, longitude, type)
+
            Example:
            route = [ Path_from_A_to_B, ... Path_from_L_to_M ]
-           route.append(coor_of_node_N)
+           route.append((lat_N, lon_N, type_N))
            route = [ Path_from_A_to_B, ... Path_from_L_to_M, Path_from_M_to_N ]
 
            Raises:
            - UnfeasibleRouteException (without modifing current route)
            - ValueError if nor greenest or shortest flags is set
         """
-        path = self.default_path(self.last_node(with_type=False), dest_node)
+        path = self.default_path(self.last_node(), dest_node)
 
         if path.time + sum(p.time for p in self._paths) > self.time_limit:
             raise UnfeasibleRouteException('Time limit exceeeded')
@@ -110,11 +109,13 @@ class Route(object):
         self._batteries.append(batt)
 
     def remove(self, rm_node):
-        """Remove the first path ending with node and the next one.
+        """Remove the first path ending with rm_node and the next one.
+
+           rm_node is a tuple of three elements: (latitude, longitude, type)
 
            Example:
            route = [ Path_from_A_to_B, Path_from_B_to_C, ... Path_from_L_to_M ]
-           route.remove(coor_of_node_B)
+           route.remove((lat_B, lon_B, type_B))
            route = [ Path_from_A_to_C, ... Path_from_L_to_M ]
 
            Raises:
@@ -123,7 +124,7 @@ class Route(object):
         """
         try:
             idx = next(index for index, path in enumerate(self._paths)
-                       if path.last_node() == rm_node[:2])
+                       if path.last_node() == rm_node)
         except StopIteration:
             # rm_node not found in self._paths
             return
@@ -135,8 +136,8 @@ class Route(object):
         self._paths, self._batteries = self._paths[:idx], self._batteries[:idx]
 
         try:
-            for coor in nodes_to_append:
-                self.append(coor)
+            for node in nodes_to_append:
+                self.append(node)
         except UnfeasibleRouteException as e:
             self._paths, self._batteries = path_bkp, batt_bkp
             raise e
@@ -144,9 +145,11 @@ class Route(object):
     def substitute(self, old_node, new_node):
         """Substitute the first path ending with old_node and the next one.
 
+           old_node and new_node are tuples of three elements: (lat, lon, type)
+
            Example:
            route = [ Path_from_A_to_B, Path_from_B_to_C, ... Path_from_L_to_M ]
-           route.substitute(coor_of_node_B, coor_of_S)
+           route.substitute((lat_B, lon_B, type_B), (lat_S, lon_S, type_S))
            route = [ Path_from_A_to_S, Path_from_S_to_C, ... Path_from_L_to_M ]
 
            Raises:
@@ -155,13 +158,12 @@ class Route(object):
         """
         try:
             idx = next(index for index, path in enumerate(self._paths)
-                       if path.last_node() == old_node[:2])
+                       if path.last_node() == old_node)
         except StopIteration:
             # old_node not found in self._paths
             return
 
         nodes_to_append = [p.last_node() for p in self._paths[idx:]]
-
         if new_node in nodes_to_append:
             raise ValueError('Could not substitute node with another one '
                              'already in route')
@@ -171,42 +173,49 @@ class Route(object):
         self._paths, self._batteries = self._paths[:idx], self._batteries[:idx]
 
         try:
-            for coor in [new_node] + nodes_to_append:
-                self.append(coor)
+            self.append(new_node)
+            for node in nodes_to_append:
+                self.append(node)
         except UnfeasibleRouteException as e:
             self._paths, self._batteries = path_bkp, batt_bkp
             raise e
 
     def is_feasible(self, paths, batteries):
-        """Return if Route feasibility check is passed.
+        """Return if feasibility check is passed.
 
-           Otherwise raises UnfeasibleRouteException
+           paths:     list of Path
+           batteries: list of Battery
         """
         time_test = 0
-        batt_test = Battery()
+        b_test = Battery()
         for i, (*src, src_type) in enumerate(paths[:-1]):
             *dest, dest_type = paths[i + 1]
-            path = self.default_path(src, dest)
+            try:
+                path = self.default_path(src, dest)
+                b_test.charge -= path.energy
+            except UnfeasibleRouteException:
+                return False
 
-            batt_test.charge -= path.energy
             time_test += path.time
 
             # if energy sum is not zero a charge might have happened
             e_sum = batteries[i + 1].charge - batteries[i].charg + path.energy
             if abs(e_sum) > 0 and dest_type == 'station':
-                time_test += batt_test.recharge_until(batteries[i + 1].charge)
+                try:
+                    time_test += b_test.recharge_until(batteries[i + 1].charge)
+                except UnfeasibleRouteException:
+                    return False
             elif abs(e_sum) > 0:
-                raise UnfeasibleRouteException('Could not charge battery '
-                                               'outside stations')
+                return False  # Could not charge battery outside stations
 
             if time_test > self.time_limit:
-                raise UnfeasibleRouteException('Time limit exceeded')
+                return False  # Time limit exceeded
         return True
 
     def visited_customers(self):
-        """Return set of visited customers."""
+        """Return set of visited customers (lat, lon, 'customer')."""
         return {path.last_node() for path in self._paths
-                if path.last_node(with_type=True)[2] == 'customer'}
+                if path.last_node()[2] == 'customer'}
 
     def last_battery(self):
         """Return battery status at last reached node.
@@ -217,17 +226,19 @@ class Route(object):
             return Battery()
         return self._batteries[-1]
 
-    def last_node(self, with_type=True):
+    def last_node(self):
         """Return (latitude, longitude, type) of last reached node.
 
            Depot is returned on empty route.
         """
         if not self._paths:
-            return self._graph_cache.graph().depot
-        return self._paths[-1].last_node(with_type=with_type)
+            return self._graph_cache.graph.depot
+        return self._paths[-1].last_node()
 
     def default_path(self, src_node, dest_node):
         """Return greenest or shortest path between src and dest.
+
+           src_node and dest_node are tuples of three elements (lat, lon, type)
 
            Raises:
            - UnfeasibleRouteException if there is no path between src and dest
@@ -240,21 +251,24 @@ class Route(object):
                 return self._graph_cache.shortest(src_node, dest_node)
             else:
                 raise ValueError('Both greenest and shortest flag are off')
-        except nx.exception.NetworkxNoPath as e:
+        except nx.exception.NetworkXNoPath as e:
             raise UnfeasibleRouteException(str(e))
 
 
 class Path(object):
-    """A path is a sequence of nodes visited in a given order."""
+    """A path is a sequence of nodes visited in a given order.
+
+       A node is a tuple of three elements: (latitude, longitude, type)
+    """
 
     def __init__(self, graph, coor_list=None):
-        """Initialize a path from a list of node coordinates."""
+        """Initialize a path from a list of coordinates (lat, lon)."""
         self._graph = graph
         self._nodes = list()  # each item will be a tuple: ( lat, long, type )
         self._saved = dict()  # empty cache for energy, length and time values
 
         if coor_list is not None:
-            for lat, lon in coor_list:
+            for lat, lon, *__ in coor_list:
                 self.append(lat, lon)
 
     def __iter__(self):
@@ -290,60 +304,55 @@ class Path(object):
         return self._sum_over_label('time')
 
     def append(self, node_latitude, node_longitude, node_type=None):
-        """Insert node in last position of the node list."""
-        if node_type is None:
-            node_type = self._graph.node[(node_latitude,
-                                          node_longitude)]['type']
-        self._nodes.append((node_latitude, node_longitude, node_type))
-        self._saved = dict()  # invalidate cached energy, length and time
+        """Insert node in last position of the node list.
 
-    def remove(self, node_latitude, node_longitude, node_type=''):
-        """Remove from node list the first occurrence of the specified node."""
+           node_type argument is ignored and overwritten
+        """
+        node_type = self._graph.node[(node_latitude, node_longitude)]['type']
+        self._saved = dict()  # invalidate cached properties
+        self._nodes.append((node_latitude, node_longitude, node_type))
+
+    def remove(self, node_latitude, node_longitude, node_type=None):
+        """Remove from node list the first occurrence of the specified node.
+
+           node_type argument is ignored, the match is over coordinates.
+        """
         for index, (lat, lon, _) in enumerate(self._nodes):
             if (lat, lon) == (node_latitude, node_longitude):
                 self._saved = dict()  # invalidate cached properties
                 del self._nodes[index]
                 return index
 
-    def substitute(self, old_lat, old_lon, new_lat, new_lon):
-        """Replace the first occurrence of the old node with a new one."""
+    def substitute(self, old_node, new_node):
+        """Replace the first occurrence of the old node with new_node.
+
+           old_node and new_node should be tuples of at least two elements.
+        """
         for index, (lat, lon, _) in enumerate(self._nodes):
-            if (lat, lon) == (old_lat, old_lon):
+            if (lat, lon) == old_node[:2]:
                 self._saved = dict()  # invalidate cached properties
-                record = (new_lat, new_lon,
-                          self._graph.node[(new_lat, new_lon)]['type'])
-                self._nodes[index] = record
+                rec = (*new_node[:2], self._graph.node[new_node[:2]]['type'])
+                self._nodes[index] = rec
                 return index
 
-    def first_node(self, with_type=False):
-        """Return first item or nodes.
-
-           Raises IndexError if path is empty
-        """
+    def first_node(self):
+        """Raises IndexError if path is empty."""
         if not self._nodes:
             raise IndexError('Could not get first node from empty path')
-        if with_type:
-            return self._nodes[0]
-        else:
-            return self._nodes[0][:2]
+        return self._nodes[0]
 
-    def last_node(self, with_type=False):
-        """Return first item or nodes.
-
-           Raises IndexError if path is empty
-        """
+    def last_node(self):
+        """Raises IndexError if path is empty."""
         if not self._nodes:
             raise IndexError('Could not get last node from empty path')
-        if with_type:
-            return self._nodes[-1]
-        else:
-            return self._nodes[-1][:2]
+        return self._nodes[-1]
 
 
 class Battery(object):
 
     def __init__(self):
-        car = IO.load_problem_file()['car']
+        """Raises ValueError on malformed ccs_charge percentage in problem."""
+        car = IO.load_problem_file()['car'][1]
         self._total_energy = car['battery']  # kW·h
         self._total_energy *= 3.6 * 10 ** 6  # Joule
         self._charge = self._total_energy    # Joule
@@ -366,8 +375,8 @@ class Battery(object):
         return self._charge
 
     @charge.setter
-    def x(self, new_energy):
-        """Modify charge value."""
+    def charge(self, new_energy):
+        """Raises BatteryCriticalException if under threshold."""
         if new_energy <= self._critical * self._total_energy:
             raise BatteryCriticalException()
         self._charge = min(self._total_energy, new_energy)
@@ -397,7 +406,7 @@ class Battery(object):
     def time_elapsed(self, energy_1, energy_2):
         """Return time (min) to charge from energy_1 to energy_2.
 
-           Raises ValueError.
+           Raises ValueError on arguments out of bounds.
 
            Note: internal state of battery is not changed.
         """

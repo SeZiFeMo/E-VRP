@@ -33,14 +33,15 @@ __license__ = "GPL3"
 
 # ------------------------------ SCRIPT LOADED ------------------------------ #
 if __name__ == '__main__':
-    SystemExit('Please do not run that script, load it!')
+    raise SystemExit('Please do not run that script, load it!')
 
 
 def check_python_version():
     if sys.version_info < (3,):
         major, minor, *__ = sys.version_info
-        SystemExit(f'You are using the Python interpreter {major}.{minor}.\n'
-                   'Please use at least Python version 3!')
+        raise SystemExit('You are using the Python interpreter '
+                         f'{major}.{minor}.\n'
+                         'Please use at least Python version 3!')
 
 
 def energy(rise, length, consumption, weight, **kwargs):
@@ -50,6 +51,7 @@ def energy(rise, length, consumption, weight, **kwargs):
        consumption in kW⋅h/100km
        weight in kilograms
     """
+    length /= 10**3  # m to km
     theta = -2 / 3 if rise < 0 else 1
     consumption *= 36000  # kW⋅h/100km  to  J/km
     return consumption * length + theta * weight * 9.81 * rise
@@ -79,12 +81,6 @@ class CLI(object):
                 description=CLI._description,
                 epilog=CLI._epilog)
             group = parser.add_mutually_exclusive_group()
-#            parser.add_argument('-a', '--aa',
-#                                default='Default_value',
-#                                dest='Variable_name_which_get_the_value',
-#                                help='Text_shown_in_help',
-#                                metavar='Value_printed_in_help_next_to_aa',
-#                                type=str)  # Data type
             parser.add_argument('-a', '--altitude',
                                 default='ASTGTM2_de',
                                 dest='altitude',

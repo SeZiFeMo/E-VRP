@@ -96,12 +96,16 @@ class Route(object):
            - UnfeasibleRouteException (without modifing current route)
            - ValueError if nor greenest or shortest flags is set
         """
-        path = self.default_path(self.last_node(), dest_node)
+        if self.is_empty():
+            src_node, batt = self._graph_cache.graph.depot, Battery()
+        else:
+            src_node, batt = self.last_node(), copy.copy(self.last_battery())
+
+        path = self.default_path(src_node, dest_node)
 
         if path.time + sum(p.time for p in self._paths) > self.time_limit:
             raise UnfeasibleRouteException('Time limit exceeeded')
 
-        batt = copy.copy(self.last_battery())
         batt.charge -= path.energy  # could raise UnfeasibleRouteException
 
         # it's safe to append path to route because it's feasible
@@ -122,6 +126,9 @@ class Route(object):
            - UnfeasibleRouteException (without modifing current route)
            - ValueError if nor greenest or shortest flags is set
         """
+        if self.is_empty():
+            return
+
         try:
             idx = next(index for index, path in enumerate(self._paths)
                        if path.last_node() == rm_node)
@@ -129,7 +136,7 @@ class Route(object):
             # rm_node not found in self._paths
             return
 
-        nodes_to_append = [p.last_node() for p in self._paths[idx:]]
+        nodes_to_append = [p.last_node() for p in self._paths[idx + 1:]]
 
         # backup and cut paths and batteries
         path_bkp, batt_bkp = copy.copy(self._paths), copy.copy(self._batteries)
@@ -156,6 +163,9 @@ class Route(object):
            - UnfeasibleRouteException (without modifing current route)
            - ValueError if new_node is already in route
         """
+        if self.is_empty():
+            return
+
         try:
             idx = next(index for index, path in enumerate(self._paths)
                        if path.last_node() == old_node)
@@ -163,7 +173,7 @@ class Route(object):
             # old_node not found in self._paths
             return
 
-        nodes_to_append = [p.last_node() for p in self._paths[idx:]]
+        nodes_to_append = [p.last_node() for p in self._paths[idx + 1:]]
         if new_node in nodes_to_append:
             raise ValueError('Could not substitute node with another one '
                              'already in route')
@@ -179,6 +189,16 @@ class Route(object):
         except UnfeasibleRouteException as e:
             self._paths, self._batteries = path_bkp, batt_bkp
             raise e
+
+    def is_empty(self):
+        """Return if path and batteries list are empty.
+
+           Raises IndexError if the two lists have different lengths.
+        """
+        if len(self._paths) != len(self._batteries):
+            raise IndexError('Lengths of paths and batteries lists differ '
+                             f'({len(self._paths)} != {len(self._batteries)})')
+        return (not self._paths) and (not self._batteries)
 
     def is_feasible(self, paths, batteries):
         """Return if feasibility check is passed.
@@ -220,20 +240,18 @@ class Route(object):
     def last_battery(self):
         """Return battery status at last reached node.
 
-           A full battery is returned on empty route.
+           None is returned on empty route.
         """
-        if not self._batteries:
-            return Battery()
-        return self._batteries[-1]
+        if not self.is_empty():
+            return self._batteries[-1]
 
     def last_node(self):
         """Return (latitude, longitude, type) of last reached node.
 
-           Depot is returned on empty route.
+           None is returned on empty route.
         """
-        if not self._paths:
-            return self._graph_cache.graph.depot
-        return self._paths[-1].last_node()
+        if not self.is_empty():
+            return self._paths[-1].last_node()
 
     def default_path(self, src_node, dest_node):
         """Return greenest or shortest path between src and dest.

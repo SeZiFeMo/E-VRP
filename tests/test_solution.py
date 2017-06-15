@@ -144,8 +144,9 @@ class test_route_class(unittest.TestCase):
         nodes_to_add = [(self.customers[2], 'customer'), (self.depot, 'depot')]
         for node, label in nodes_to_add:
             route.append((node['lat'], node['lon'], label))
+        rm = self.customers[2]['lat'], self.customers[2]['lon'], 'customer'
         new_node = self.stations[1]['lat'], self.stations[1]['lon'], 'station'
-        route.substitute(nodes_to_add[0], new_node)
+        route.substitute(rm, new_node)
         self.assertEqual(len(self.route._paths), len(self.route._batteries))
 
     def test_raise(self):

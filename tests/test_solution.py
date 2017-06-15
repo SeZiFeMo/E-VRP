@@ -28,8 +28,9 @@ __authors__ = "Serena Ziviani, Federico Motta"
 __copyright__ = "E-VRP  Copyright (C)  2017"
 __license__ = "GPL3"
 
-import unittest
+import math
 import networkx as nx
+import unittest
 
 from context import graph
 from context import solution
@@ -47,46 +48,63 @@ class test_solution_class(unittest.TestCase):
 
 class test_route_class(unittest.TestCase):
 
+    depot =        {'lat': 48, 'lon': 16, 'alt':  0, 'type': 'depot'   }
+    customers =   [{'lat': 47, 'lon': 15, 'alt':  1, 'type': 'customer'},
+                   {'lat': 49, 'lon': 13, 'alt':  0, 'type': 'customer'},
+                   {'lat': 50, 'lon': 14, 'alt': -3, 'type': 'customer'}]
+    stations =    [{'lat': 48, 'lon': 14, 'alt':  3, 'type': 'station' },
+                   {'lat': 47, 'lon': 16, 'alt':  2, 'type': 'station' }]
+    other_nodes = [{'lat': 49, 'lon': 15, 'alt':  2, 'type': ''        },
+                   {'lat': 50, 'lon': 16, 'alt': -4, 'type': ''        }]
+
+    edges = [{'src_lat': 48, 'src_lon': 16, 'dest_lat': 50, 'dest_lon': 16,
+              'speed': 70, 'oneway': False},
+             {'src_lat': 50, 'src_lon': 16, 'dest_lat': 50, 'dest_lon': 14,
+              'speed': 70, 'oneway': False},
+             {'src_lat': 50, 'src_lon': 14, 'dest_lat': 49, 'dest_lon': 15,
+              'speed': 30, 'oneway': True},
+             {'src_lat': 49, 'src_lon': 15, 'dest_lat': 48, 'dest_lon': 14,
+              'speed': 30, 'oneway': True},
+             {'src_lat': 48, 'src_lon': 14, 'dest_lat': 49, 'dest_lon': 13,
+              'speed': 50, 'oneway': False},
+             {'src_lat': 49, 'src_lon': 13, 'dest_lat': 50, 'dest_lon': 14,
+              'speed': 50, 'oneway': True},
+             {'src_lat': 48, 'src_lon': 14, 'dest_lat': 50, 'dest_lon': 14,
+              'speed': 30, 'oneway': True},
+             {'src_lat': 48, 'src_lon': 16, 'dest_lat': 49, 'dest_lon': 15,
+              'speed': 50, 'oneway': True},
+             {'src_lat': 48, 'src_lon': 16, 'dest_lat': 48, 'dest_lon': 14,
+              'speed': 30, 'oneway': False},
+             {'src_lat': 48, 'src_lon': 14, 'dest_lat': 47, 'dest_lon': 15,
+              'speed': 90, 'oneway': False},
+             {'src_lat': 47, 'src_lon': 15, 'dest_lat': 47, 'dest_lon': 16,
+              'speed': 50, 'oneway': False},
+             {'src_lat': 47, 'src_lon': 16, 'dest_lat': 48, 'dest_lon': 16,
+              'speed': 50, 'oneway': False}]
+
     def setUp(self):
         alt_lab = 'ASTGTM2_de'
         stub_graph = nx.DiGraph(name=graph.Graph._osm_name)
-        # coordinates are (longitude, latitude)
-        stub_graph.add_node((16, 48), {alt_lab: 0, 'type': 'depot'})
-        stub_graph.add_node((17, 49), {alt_lab: 2, 'type': 'station'})
-        stub_graph.add_node((18, 50), {alt_lab: 0, 'type': 'customer'})
-        stub_graph.add_node((19, 51), {alt_lab: 4, 'type': ''})
-        stub_graph.add_edge((16, 48), (17, 49), {'osm_id': 211937039,
-                                                 'length': 20,
-                                                 # rise = 2 m
-                                                 'speed': 20,
-                                                 # energy = 8519818.68 Joule
-                                                 # slope = 0.09966865249116 rad
-                                                 # time = 0.06 min
-                                                 'oneway': False})
-        stub_graph.add_edge((17, 49), (18, 50), {'osm_id': 165738417,
-                                                 'length': 57,
-                                                 # rise = -2 m
-                                                 'speed': 20,
-                                                 # energy = 24229479.12 Joule
-                                                 # slope = -0.0350733305332 rad
-                                                 # time = 0.170999999999999 min
-                                                 'oneway': False})
-        stub_graph.add_edge((18, 50), (16, 48), {'osm_id': 33170597,
-                                                 'length': 54,
-                                                 # rise = 0 m
-                                                 'speed': 45,
-                                                 # energy = 22939200.0 Joule
-                                                 # slope = 0.0 rad
-                                                 # time = 0.072
-                                                 'oneway': False})
-        stub_graph.add_edge((18, 50), (19, 51), {'osm_id': 12345678,
-                                                 'length': 10,
-                                                 # rise = 4 m
-                                                 'speed': 50,
-                                                 # energy = 4295637.36 Joule
-                                                 # slope = 0.38050637711236 rad
-                                                 # time = 0.012 min
-                                                 'oneway': False})
+        l = [self.depot] + self.customers + self.stations + self.other_nodes
+        for node in l:
+            # coordinates are (longitude, latitude)
+            stub_graph.add_node((node['lon'], node['lat']),
+                                 {alt_lab: node['alt'], 'type': node['type']})
+
+        for idx, e in enumerate(self.edges):
+            src = next(n for n in l if n['lat'] == e['src_lat'] and
+                                       n['lon'] == e['src_lon'])
+            dest = next(n for n in l if n['lat'] == e['dest_lat'] and
+                                        n['lon'] == e['dest_lon'])
+            length = math.sqrt(math.pow(e['src_lat'] - e['dest_lat'], 2) +
+                               math.pow(e['src_lon'] - e['dest_lon'], 2) +
+                               math.pow(src['alt']   - dest['alt'],   2))
+
+            # coordinates are (longitude, latitude)
+            stub_graph.add_edge((e['src_lon'], e['src_lat']),
+                                (e['dest_lon'], e['dest_lat']),
+                                {'osm_id': idx, 'length': length,
+                                 'speed': e['speed'], 'oneway': e['oneway']})
 
         # self.graph = Graph._get_abstract_graph(stub_graph)  # it is be
         self.graph = graph.Graph(from_DiGraph=stub_graph)     # the same
@@ -101,31 +119,33 @@ class test_route_class(unittest.TestCase):
     def test_create_route_with_nodes_list(self):
         # constructor does not get a list of nodes
         route = solution.Route(self.cache, greenest=True)
-        # node can be add after with a for loop
-        for coor in [(49, 17, 'station'), (48, 16, 'depot')]:
-            route.append(coor)
+
+        # nodes can be added after with a for loop
+        nodes_to_add = [(self.customers[0], 'customer'), (self.depot, 'depot')]
+        for node, label in nodes_to_add:
+            route.append((node['lat'], node['lon'], label))
 
     def test_is_feasible(self):
         self.assertTrue(self.route.is_feasible(paths=list(), batteries=list()))
 
     def test_append_node(self):
-        node = (49, 17, 'station')
+        node = self.stations[0]['lat'], self.stations[0]['lon'], 'station'
         self.route.append(node)
         self.assertEqual(len(self.route._paths), len(self.route._batteries))
 
     def test_remove_node(self):
-        node = (50, 18, 'customer')
+        node = (self.customers[1]['lat'], self.customers[1]['lon'], 'customer')
         self.route.append(node)
         self.route.remove(node)
         self.assertEqual(len(self.route._paths), len(self.route._batteries))
 
     def test_substitute_node(self):
         route = solution.Route(self.cache, greenest=True)
-        for coor in [(49, 17, 'station'), (48, 16, 'depot')]:
-            route.append(coor)
-        node1 = (49, 17, 'station')
-        node2 = (50, 18, 'customer')
-        route.substitute(node1, node2)
+        nodes_to_add = [(self.customers[2], 'customer'), (self.depot, 'depot')]
+        for node, label in nodes_to_add:
+            route.append((node['lat'], node['lon'], label))
+        new_node = self.stations[1]['lat'], self.stations[1]['lon'], 'station'
+        route.substitute(nodes_to_add[0], new_node)
         self.assertEqual(len(self.route._paths), len(self.route._batteries))
 
     def test_raise(self):

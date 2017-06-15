@@ -165,10 +165,7 @@ class Graph(nx.classes.digraph.DiGraph):
         return ret
 
     def _nodes_of_interests(self, label):
-        """Return cached list of nodes of interests labelled with 'label'.
-
-           Raises AttributeError
-        """
+        """Return cached list of nodes of interests labelled with 'label'."""
         if not hasattr(self, '_' + label):
             # label_nodes() was not called; it should have done this job
             tmp = [(*coor, label) for coor, data in self.nodes_iter(data=True)
@@ -178,17 +175,17 @@ class Graph(nx.classes.digraph.DiGraph):
 
     @property
     def depot(self):
-        """Return depot coordinates or raises AttributeError."""
+        """Return depot coordinates."""
         return self._nodes_of_interests('depot')[0]
 
     @property
     def customers(self):
-        """Return list of customers coordinates or raises AttributeError."""
+        """Return list of customers coordinates."""
         return self._nodes_of_interests('customer')
 
     @property
     def stations(self):
-        """Return list of stations coordinates or raises AttributeError."""
+        """Return list of stations coordinates."""
         return self._nodes_of_interests('station')
 
     def edge(self, node_src, node_dest):

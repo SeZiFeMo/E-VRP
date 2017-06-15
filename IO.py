@@ -69,7 +69,8 @@ def check_workspace():
                             'nodes.shp')
 
         # check each altitude attribute is a floating point number
-        if not isinstance(data[altitude], float):
+        if not isinstance(data[altitude], float) \
+           and not isinstance(data[altitude], int):
             raise TypeError(f'Altitude of node lat: {lat}, lon {lon} '
                             'is not a float')
 

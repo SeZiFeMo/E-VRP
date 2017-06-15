@@ -104,9 +104,9 @@ class Route(object):
         path = self.default_path(src_node, dest_node)
 
         if path.time + sum(p.time for p in self._paths) > self.time_limit:
-            raise UnfeasibleRouteException('Time limit exceeeded')
+            raise MaximumTimeException('Time limit exceeded')
 
-        batt.charge -= path.energy  # could raise UnfeasibleRouteException
+        batt.charge -= path.energy  # can raise BatteryCriticalException
 
         # it's safe to append path to route because it's feasible
         self._paths.append(path)
@@ -450,4 +450,9 @@ class BatteryCriticalException(UnfeasibleRouteException):
 
 class InsufficientBatteryException(UnfeasibleRouteException):
     """Battery capacity is not enough to satisfy requested amount of energy."""
+    pass
+
+
+class MaximumTimeException(UnfeasibleRouteException):
+    """Route time exceeds the maximum time for a route completion."""
     pass

@@ -48,38 +48,38 @@ class test_solution_class(unittest.TestCase):
 
 class test_route_class(unittest.TestCase):
 
-    depot =        {'lat': 48, 'lon': 16, 'alt':  0, 'type': 'depot'   }
-    customers =   [{'lat': 47, 'lon': 15, 'alt':  1, 'type': 'customer'},
-                   {'lat': 49, 'lon': 13, 'alt':  0, 'type': 'customer'},
-                   {'lat': 50, 'lon': 14, 'alt': -3, 'type': 'customer'}]
-    stations =    [{'lat': 48, 'lon': 14, 'alt':  3, 'type': 'station' },
-                   {'lat': 47, 'lon': 16, 'alt':  2, 'type': 'station' }]
-    other_nodes = [{'lat': 49, 'lon': 15, 'alt':  2, 'type': ''        },
-                   {'lat': 50, 'lon': 16, 'alt': -4, 'type': ''        }]
+    depot = {'lat': 48, 'lon': 16, 'alt': 0, 'type': 'depot'}
+    customers = [{'lat': 47, 'lon': 15, 'alt': 1, 'type': 'customer'},
+                 {'lat': 49, 'lon': 13, 'alt': 0, 'type': 'customer'},
+                 {'lat': 50, 'lon': 14, 'alt': -3, 'type': 'customer'}]
+    stations = [{'lat': 48, 'lon': 14, 'alt': 3, 'type': 'station'},
+                {'lat': 47, 'lon': 16, 'alt': 2, 'type': 'station'}]
+    other_nodes = [{'lat': 49, 'lon': 15, 'alt': 2, 'type': ''},
+                   {'lat': 50, 'lon': 16, 'alt': -4, 'type': ''}]
 
-    edges = [{'src_lat': 48, 'src_lon': 16, 'dest_lat': 50, 'dest_lon': 16,
+    edges = [{'src_lat': 48, 'src_lon': 16, 'dst_lat': 50, 'dst_lon': 16,
               'speed': 70, 'oneway': False},
-             {'src_lat': 50, 'src_lon': 16, 'dest_lat': 50, 'dest_lon': 14,
+             {'src_lat': 50, 'src_lon': 16, 'dst_lat': 50, 'dst_lon': 14,
               'speed': 70, 'oneway': False},
-             {'src_lat': 50, 'src_lon': 14, 'dest_lat': 49, 'dest_lon': 15,
+             {'src_lat': 50, 'src_lon': 14, 'dst_lat': 49, 'dst_lon': 15,
               'speed': 30, 'oneway': True},
-             {'src_lat': 49, 'src_lon': 15, 'dest_lat': 48, 'dest_lon': 14,
+             {'src_lat': 49, 'src_lon': 15, 'dst_lat': 48, 'dst_lon': 14,
               'speed': 30, 'oneway': True},
-             {'src_lat': 48, 'src_lon': 14, 'dest_lat': 49, 'dest_lon': 13,
+             {'src_lat': 48, 'src_lon': 14, 'dst_lat': 49, 'dst_lon': 13,
               'speed': 50, 'oneway': False},
-             {'src_lat': 49, 'src_lon': 13, 'dest_lat': 50, 'dest_lon': 14,
+             {'src_lat': 49, 'src_lon': 13, 'dst_lat': 50, 'dst_lon': 14,
               'speed': 50, 'oneway': True},
-             {'src_lat': 48, 'src_lon': 14, 'dest_lat': 50, 'dest_lon': 14,
+             {'src_lat': 48, 'src_lon': 14, 'dst_lat': 50, 'dst_lon': 14,
               'speed': 30, 'oneway': True},
-             {'src_lat': 48, 'src_lon': 16, 'dest_lat': 49, 'dest_lon': 15,
+             {'src_lat': 48, 'src_lon': 16, 'dst_lat': 49, 'dst_lon': 15,
               'speed': 50, 'oneway': True},
-             {'src_lat': 48, 'src_lon': 16, 'dest_lat': 48, 'dest_lon': 14,
+             {'src_lat': 48, 'src_lon': 16, 'dst_lat': 48, 'dst_lon': 14,
               'speed': 30, 'oneway': False},
-             {'src_lat': 48, 'src_lon': 14, 'dest_lat': 47, 'dest_lon': 15,
+             {'src_lat': 48, 'src_lon': 14, 'dst_lat': 47, 'dst_lon': 15,
               'speed': 90, 'oneway': False},
-             {'src_lat': 47, 'src_lon': 15, 'dest_lat': 47, 'dest_lon': 16,
+             {'src_lat': 47, 'src_lon': 15, 'dst_lat': 47, 'dst_lon': 16,
               'speed': 50, 'oneway': False},
-             {'src_lat': 47, 'src_lon': 16, 'dest_lat': 48, 'dest_lon': 16,
+             {'src_lat': 47, 'src_lon': 16, 'dst_lat': 48, 'dst_lon': 16,
               'speed': 50, 'oneway': False}]
 
     def setUp(self):
@@ -89,29 +89,29 @@ class test_route_class(unittest.TestCase):
         for node in l:
             # coordinates are (longitude, latitude)
             stub_graph.add_node((node['lon'], node['lat']),
-                                 {alt_lab: node['alt'], 'type': node['type']})
+                                {alt_lab: node['alt'], 'type': node['type']})
 
         for idx, e in enumerate(self.edges):
-            src = next(n for n in l if n['lat'] == e['src_lat'] and
-                                       n['lon'] == e['src_lon'])
-            dest = next(n for n in l if n['lat'] == e['dest_lat'] and
-                                        n['lon'] == e['dest_lon'])
-            length = math.sqrt(math.pow(e['src_lat'] - e['dest_lat'], 2) +
-                               math.pow(e['src_lon'] - e['dest_lon'], 2) +
-                               math.pow(src['alt']   - dest['alt'],   2))
+            s = next(n for n in l
+                     if n['lat'] == e['src_lat'] and n['lon'] == e['src_lon'])
+            d = next(n for n in l
+                     if n['lat'] == e['dst_lat'] and n['lon'] == e['dst_lon'])
+            length = math.sqrt(math.pow(e['src_lat'] - e['dst_lat'], 2) +
+                               math.pow(e['src_lon'] - e['dst_lon'], 2) +
+                               math.pow(s['alt'] - d['alt'], 2))
 
             # coordinates are (longitude, latitude)
             stub_graph.add_edge((e['src_lon'], e['src_lat']),
-                                (e['dest_lon'], e['dest_lat']),
+                                (e['dst_lon'], e['dst_lat']),
                                 {'osm_id': idx, 'length': length,
                                  'speed': e['speed'], 'oneway': e['oneway']})
 
-        # self.graph = Graph._get_abstract_graph(stub_graph)  # it is be
-        self.graph = graph.Graph(from_DiGraph=stub_graph)     # the same
-        # now self.graph has different attributes from stub_graph
-        # nodes have: altitude, type, latitude, longitude
-        # edges have: osm_id, length, rise, speed, energy, slope, time
-        # self.graph nodes have also inverted coordinates (lat, lon)
+        self.graph = graph.Graph(from_DiGraph=stub_graph)
+        """self.graph has now different attributes from stub_graph
+           - nodes have: altitude, type, latitude, longitude
+           - edges have: osm_id, length, rise, speed, energy, slope, time
+           note: nodes coordinates are now in (lat, lon) format
+        """
 
         self.cache = graph.CachePaths(self.graph)
         self.route = solution.Route(self.cache, greenest=True)

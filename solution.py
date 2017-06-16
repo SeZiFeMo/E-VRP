@@ -401,6 +401,7 @@ class Battery(object):
         if energy > 1 and energy <= 100:
             # normalize energy variable
             energy /= 100
+
         elif not (energy > 0 and energy <= 1):
             raise ValueError('Bad percentage in car ccs_charge')
         energy *= self._total_energy  # car['ccs_charge']['%'] in Joule

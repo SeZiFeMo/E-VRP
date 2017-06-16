@@ -31,12 +31,13 @@ __license__ = "GPL3"
 # -------------------------------- SCRIPT RUN ------------------------------- #
 
 # Add to the following loop every external library used!
-for lib in ('matplotlib.pyplot as plt', 'networkx as nx', 'yaml'):
+for lib in ('graphviz', 'matplotlib.pyplot as plt', 'networkx as nx', 'yaml'):
     try:
         exec('import ' + str(lib))
     except ImportError:
         raise SystemExit(f'Could not import {lib} library, please install it!')
 
+import graphviz
 import math
 import matplotlib.pyplot as plt
 import networkx as nx
@@ -253,13 +254,6 @@ class Graph(nx.classes.digraph.DiGraph):
             raise RuntimeError('One or more necessary path between the depot '
                                'and the customers were not found')
 
-    def draw(self):
-        """Wrap networkx draw function and suppress its warnings."""
-        with warnings.catch_warnings():
-            warnings.filterwarnings('ignore', category=UserWarning)
-            nx.draw(self)
-        plt.show()
-
     def print_edge_properties(self, fclass_whitelist=None, tag_blacklist=None):
         """For each edge in the whitelist print tags not in the blacklist."""
         if fclass_whitelist is None:
@@ -407,6 +401,112 @@ class CachePaths(object):
                      for s, d, green, short in self._cache if s == src_node])
 
 
+class DrawSVG(object):
+    """Create an svg file from either a solution or a route or a path."""
+
+    colors = ('blue', 'green', 'yellow')
+
+    def __init__(self, path, obj, draw_whole_graph=True, color='red'):
+        """Create an svg file from passed obj.
+
+           path sould not have an extension!
+
+           Raises TypeError if obj is not a Solution or Route or Path.
+        """
+        self.path = path
+        self.draw_graph = graphviz.Digraph(filename=self.path + '.gv',
+                                           engine='neato', format='svg')
+
+        if isinstance(obj, solution.Solution):
+            self.graph = obj._graph_cache.graph
+            if draw_whole_graph:
+                self.add_graph_on_background()
+
+            self.add_solution(obj, color=color)
+        elif isinstance(obj, solution.Route):
+            self.graph = obj._graph_cache.graph
+            if draw_whole_graph:
+                self.add_graph_on_background()
+
+            self.add_route(obj, color=color)
+        elif isinstance(obj, solution.Path):
+            self.graph = obj._graph
+            if draw_whole_graph:
+                self.add_graph_on_background()
+
+            self.add_path(obj, color=color)
+        else:
+            raise TypeError('obj passed to DrawSVG() is not a Solution or a '
+                            'Route or a Path')
+
+    def save(self, view=False, cleanup=True):
+        self.draw_graph.render(filename=self.path, view=view, cleanup=cleanup)
+
+    def add_solution(self, solution, color='black'):
+        """Add solution to SVG."""
+        for index, route in enumerate(solution.routes):
+            self.add_route(route, color=self.colors[index % len(self.colors)])
+
+    def add_route(self, route, color='black'):
+        """Add route to SVG."""
+        for path in route._paths:
+            self.add_path(path, color=color)
+
+    def add_path(self, path, color='black'):
+        """Add path to SVG."""
+        for node in path:
+            self.add_node(node)
+        for i, src in enumerate(path._nodes[:-1]):
+            dest = path._nodes[i + 1]
+            self.add_edge(src, dest, color=color, penwidth='5', style='solid')
+
+    def add_graph_on_background(self):
+        for coor, data in self.graph.nodes_iter(data=True):
+            self.add_node((*coor, data['type']))
+
+        for src, adj_dict in self.graph.adjacency_iter():
+            for dest, data in adj_dict.items():
+                self.add_edge(src, dest)
+
+    def add_node(self, node):
+        lat, lon, lab = node
+        if lab == 'depot':
+            shape, color = 'square', 'red'
+        elif lab == 'customer':
+            shape, color = 'star', 'orange'
+        elif lab == 'station':
+            shape, color = 'diamond', 'blue'
+        else:
+            shape, color = 'circle', 'black'
+        label = lab + f'\nLat:  {lat:2.7f}\nLon: {lon:2.7f} \n\n\n\n\n '
+        self.draw_graph.node(str((lat, lon)), shape=shape, color=color,
+                             label=label, fixedsize='true', style='filled',
+                             fontsize='18',
+                             size='0.5',  # height and width of shape in inch
+                             pos=self.coordinates_to_position(lat, lon))
+
+    def add_edge(self, src, dest, color='black', penwidth='1', style='dotted'):
+        self.draw_graph.edge(str(src[:2]), str(dest[:2]),
+                             color=color, penwidth=penwidth, style=style)
+
+    def coordinates_to_position(self, lat, lon, ppi=72):
+        """Return position in points."""
+        min_lat = min(lat for lat, lon in self.graph)
+        max_lat = max(lat for lat, lon in self.graph)
+        min_lon = min(lon for lat, lon in self.graph)
+        max_lon = max(lon for lat, lon in self.graph)
+        delta_lat = max_lat - min_lat
+        delta_lon = max_lon - min_lon
+        lat, lon = lat - (delta_lat / 2), lon - (delta_lon / 2)
+        if delta_lat > delta_lon:
+            x = (8.3 * ppi * lon) / delta_lon
+            y = (8.3 * ppi * lat) / delta_lat
+        else:
+            x = (11.7 * ppi * lon) / delta_lon
+            y = (11.7 * ppi * lat) / delta_lat
+        return str('%(x)f,%(y)f!' % {'x': x / 10, 'y': y / 10})  # why 10 ?
+
+
 # ----------------------------------- MAIN ---------------------------------- #
 if __name__ == '__main__':
     try:
@@ -452,3 +552,10 @@ if __name__ == '__main__':
                 for it in green:
                     print('\tlat: {:2.7f}, lon: {:2.7f}, type: {}'.format(*it))
                 print('#' * 80)
+
+    # usage of DrawSVG class example
+    svg = DrawSVG('route_from_depot_to_first_station',
+                  cache.greenest(abstract_g.depot, abstract_g.customers[-1]))
+    svg.add_path(cache.greenest(abstract_g.customers[-1], abstract_g.depot),
+                 color='green')
+    svg.save()

@@ -1,6 +1,7 @@
 # input files
 workspace/
-problem.yaml
+*.yaml
+TODO*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

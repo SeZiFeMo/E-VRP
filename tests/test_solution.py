@@ -39,8 +39,42 @@ from context import solution
 class test_solution_class(unittest.TestCase):
 
     def setUp(self):
-        stub_graph = nx.DiGraph()
-        self.sol = solution.Solution(stub_graph)
+        alt_lab = 'ASTGTM2_de'
+        stub_graph = nx.DiGraph(name=graph.Graph._osm_name)
+        l = [test_route_class.depot] + test_route_class.customers + \
+            test_route_class.stations + test_route_class.other_nodes
+        for node in l:
+            # coordinates are (longitude, latitude)
+            stub_graph.add_node((node['lon'], node['lat']),
+                                {alt_lab: node['alt'], 'type': node['type']})
+
+        for idx, e in enumerate(test_route_class.edges):
+            s = next(n for n in l
+                     if n['lat'] == e['src_lat'] and n['lon'] == e['src_lon'])
+            d = next(n for n in l
+                     if n['lat'] == e['dst_lat'] and n['lon'] == e['dst_lon'])
+            length = math.sqrt(math.pow(e['src_lat'] - e['dst_lat'], 2) +
+                               math.pow(e['src_lon'] - e['dst_lon'], 2) +
+                               math.pow(s['alt'] - d['alt'], 2))
+
+            # coordinates are (longitude, latitude)
+            stub_graph.add_edge((e['src_lon'], e['src_lat']),
+                                (e['dst_lon'], e['dst_lat']),
+                                {'osm_id': idx, 'length': length,
+                                 'speed': e['speed'], 'oneway': e['oneway']})
+
+        abstract_graph = graph.Graph(from_DiGraph=stub_graph)
+        """abstract_graph has now different attributes from stub_graph
+           - nodes have: altitude, type, latitude, longitude
+           - edges have: osm_id, length, rise, speed, energy, slope, time
+           note: nodes coordinates are now in (lat, lon) format
+        """
+
+        cache = graph.CachePaths(abstract_graph)
+        self.sol = solution.Solution(abstract_graph, cache)
+
+    def tearDown(self):
+        self.sol = None
 
     def test_is_feasible(self):
         self.assertTrue(self.sol.is_feasible())
@@ -115,6 +149,11 @@ class test_route_class(unittest.TestCase):
 
         self.cache = graph.CachePaths(self.graph)
         self.route = solution.Route(self.cache, greenest=True)
+
+    def tearDown(self):
+        self.graph = None
+        self.cache = None
+        self.route = None
 
     def test_create_route_with_nodes_list(self):
         # constructor does not get a list of nodes

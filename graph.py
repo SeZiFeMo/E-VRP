@@ -42,6 +42,7 @@ import matplotlib.pyplot as plt
 import networkx as nx
 import warnings
 
+import heuristic
 import IO
 import utility
 import solution

@@ -42,7 +42,7 @@ if __name__ == '__main__':
 class Solution(object):
     """A Solution is a list of Routes."""
 
-    def __init__(self, graph, graph_cache=None):  # TODO remove '=None' here
+    def __init__(self, graph, graph_cache):
         self._graph_cache = graph_cache
         self._graph = graph
         self.routes = list()
@@ -200,12 +200,25 @@ class Route(object):
                              f'({len(self._paths)} != {len(self._batteries)})')
         return (not self._paths) and (not self._batteries)
 
-    def is_feasible(self, paths, batteries):
+    def is_feasible(self, paths=None, batteries=None):
         """Return if feasibility check is passed.
 
            paths:     list of Path
            batteries: list of Battery
+
+           Raises ValueError if only one argument is set
         """
+        # if missing both arguments apply over self ones
+        if paths is None and batteries is None:
+            IO.Log.debug('solution.is_feasible() applyed over self')
+            paths = copy.copy(self._paths)
+            batteries = copy.copy(self._batteries)
+        elif paths is not None and batteries is not None:
+            IO.Log.debug('solution.is_feasible() applyed over given args')
+        else:
+            raise ValueError('Please set either both or none of the arguments '
+                             'in solution.is_feasible() method')
+
         time_test = 0
         b_test = Battery()
         for i, (*src, src_type) in enumerate(paths[:-1]):

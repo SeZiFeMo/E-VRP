@@ -51,6 +51,10 @@ class Solution(object):
         """Return if all routes are feasibile."""
         return all([route.is_feasible() for route in self.routes])
 
+    @property
+    def time(self):
+        return sum([route.time for route in self.routes])
+
     def missing_customers(self):
         """Return set of missing customers."""
         customers_left = set(self._graph.customers)
@@ -189,6 +193,10 @@ class Route(object):
         except UnfeasibleRouteException as e:
             self._paths, self._batteries = path_bkp, batt_bkp
             raise e
+
+    @property
+    def time(self):
+        return sum([path.time for path in self._paths])
 
     def is_empty(self):
         """Return if path and batteries list are empty.

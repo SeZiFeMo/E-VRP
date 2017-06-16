@@ -30,6 +30,7 @@ __license__ = "GPL3"
 
 import math
 import time
+import copy
 
 import solution
 import IO
@@ -123,3 +124,40 @@ class GreedyHeuristic(object):
                     min_time = greenest.time
                     min_node = dest
         return min_node
+
+def two_opt():
+    pass
+
+def three_opt():
+    pass
+
+def move():
+    pass
+
+neighborhoods = {'2-opt': two_opt,
+                 '3-opt': three_opt,
+                 'move': move}
+
+def metaheuristic(abstract_g, cache):
+    """Solve the routing problem expressed with abstract_g and cache.
+
+    Uses a first-improvement local search."""
+    greedy_heuristic = GreedyHeuristic(abstract_g, cache)
+    initial_solution = greedy_heuristic.create_feasible_solution()
+
+    max_iteration = 1000
+    it = 0
+
+    for it in range(max_iteration):
+        for neigh in neighborhoods:
+            x = local_search(initial_solution, neigh)
+            if x.time < initial_solution.time:
+                initial_solution = x
+                break
+
+
+def local_search(solution, neighborhood):
+    """First-improvement search in the given neighborhood."""
+    mod_solution = copy.copy(solution)
+    return mod_solution
+

@@ -121,6 +121,78 @@ class test_greedy_heuristic(unittest.TestCase):
         self.heuristic._temp_route.append((47, 15, 'customer'))
         self.heuristic.handle_insufficient_energy()
 
+class test_greedy_metaheuristic(unittest.TestCase):
+
+    depot = {'lat': 48, 'lon': 16, 'alt': 0, 'type': 'depot'}
+    customers = [{'lat': 47, 'lon': 15, 'alt': 1, 'type': 'customer'},
+                 {'lat': 49, 'lon': 13, 'alt': 0, 'type': 'customer'},
+                 {'lat': 50, 'lon': 14, 'alt': -3, 'type': 'customer'}]
+    stations = [{'lat': 48, 'lon': 14, 'alt': 3, 'type': 'station'},
+                {'lat': 47, 'lon': 16, 'alt': 2, 'type': 'station'}]
+    other_nodes = [{'lat': 49, 'lon': 15, 'alt': 2, 'type': ''},
+                   {'lat': 50, 'lon': 16, 'alt': -4, 'type': ''}]
+
+    edges = [{'src_lat': 48, 'src_lon': 16, 'dst_lat': 50, 'dst_lon': 16,
+              'speed': 70, 'oneway': False},
+             {'src_lat': 50, 'src_lon': 16, 'dst_lat': 50, 'dst_lon': 14,
+              'speed': 70, 'oneway': False},
+             {'src_lat': 50, 'src_lon': 14, 'dst_lat': 49, 'dst_lon': 15,
+              'speed': 30, 'oneway': True},
+             {'src_lat': 49, 'src_lon': 15, 'dst_lat': 48, 'dst_lon': 14,
+              'speed': 30, 'oneway': True},
+             {'src_lat': 48, 'src_lon': 14, 'dst_lat': 49, 'dst_lon': 13,
+              'speed': 50, 'oneway': False},
+             {'src_lat': 49, 'src_lon': 13, 'dst_lat': 50, 'dst_lon': 14,
+              'speed': 50, 'oneway': True},
+             {'src_lat': 48, 'src_lon': 14, 'dst_lat': 50, 'dst_lon': 14,
+              'speed': 30, 'oneway': True},
+             {'src_lat': 48, 'src_lon': 16, 'dst_lat': 49, 'dst_lon': 15,
+              'speed': 50, 'oneway': True},
+             {'src_lat': 48, 'src_lon': 16, 'dst_lat': 48, 'dst_lon': 14,
+              'speed': 30, 'oneway': False},
+             {'src_lat': 48, 'src_lon': 14, 'dst_lat': 47, 'dst_lon': 15,
+              'speed': 90, 'oneway': False},
+             {'src_lat': 47, 'src_lon': 15, 'dst_lat': 47, 'dst_lon': 16,
+              'speed': 50, 'oneway': False},
+             {'src_lat': 47, 'src_lon': 16, 'dst_lat': 48, 'dst_lon': 16,
+              'speed': 50, 'oneway': False}]
+
+    def setUp(self):
+        alt_lab = 'ASTGTM2_de'
+        stub_graph = nx.DiGraph(name=graph.Graph._osm_name)
+        l = [self.depot] + self.customers + self.stations + self.other_nodes
+        for node in l:
+            # coordinates are (longitude, latitude)
+            stub_graph.add_node((node['lon'], node['lat']),
+                                {alt_lab: node['alt'], 'type': node['type']})
+
+        for idx, e in enumerate(self.edges):
+            s = next(n for n in l
+                     if n['lat'] == e['src_lat'] and n['lon'] == e['src_lon'])
+            d = next(n for n in l
+                     if n['lat'] == e['dst_lat'] and n['lon'] == e['dst_lon'])
+            length = math.sqrt(math.pow(e['src_lat'] - e['dst_lat'], 2) +
+                               math.pow(e['src_lon'] - e['dst_lon'], 2) +
+                               math.pow(s['alt'] - d['alt'], 2))
+
+            # coordinates are (longitude, latitude)
+            stub_graph.add_edge((e['src_lon'], e['src_lat']),
+                                (e['dst_lon'], e['dst_lat']),
+                                {'osm_id': idx, 'length': length,
+                                 'speed': e['speed'], 'oneway': e['oneway']})
+
+        self.graph = graph.Graph(from_DiGraph=stub_graph)     # the same
+        # self.graph has different attributes from stub_graph
+        # nodes have: altitude, type, latitude, longitude
+        # edges have: osm_id, length, rise, speed, energy, slope, time
+        # self.graph nodes have also inverted coordinates (lat, lon)
+
+        self.cache = graph.CachePaths(self.graph)
+        self.route = solution.Route(self.cache, greenest=True)
+        self.heuristic = heuristic.GreedyHeuristic(self.graph, self.cache)
+
+    def test_metaheuristic(self):
+        heuristic.metaheuristic(self.graph, self.cache)
 
 if __name__ == '__main__':
     unittest.main(failfast=False)

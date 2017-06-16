@@ -1,6 +1,7 @@
 # input files
 workspace/
 *.yaml
+*.svg
 TODO*
 
 # Byte-compiled / optimized / DLL files

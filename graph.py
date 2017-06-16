@@ -537,21 +537,21 @@ if __name__ == '__main__':
 
     # Usage example
     cache = CachePaths(abstract_g)
-    for coor, data in abstract_g.nodes_iter(data=True):
-        src_node = *coor, data['type']
-        if src_node[2] == 'depot':
-            # iterate over path starting from depot
-            for dest_node, green, short in cache.source_iterator(src_node):
-                print(f'shortest path: (length: {short.length}, '
-                      f'energy: {short.energy}, time: {short.time})')
-                for it in short:
-                    print('\tlat: {:2.7f}, lon: {:2.7f}, type: {}'.format(*it))
-
-                print(f'greenest path: (length: {green.length}, '
-                      f'energy: {green.energy}, time: {green.time})')
-                for it in green:
-                    print('\tlat: {:2.7f}, lon: {:2.7f}, type: {}'.format(*it))
-                print('#' * 80)
+#    for coor, data in abstract_g.nodes_iter(data=True):
+#        src_node = *coor, data['type']
+#        if src_node[2] == 'depot':
+#            # iterate over path starting from depot
+#            for dest_node, green, short in cache.source_iterator(src_node):
+#                print(f'shortest path: (length: {short.length}, '
+#                      f'energy: {short.energy}, time: {short.time})')
+#                for it in short:
+#                    print('\tlat: {:2.7f}, lon: {:2.7f}, type: {}'.format(*it))
+#
+#                print(f'greenest path: (length: {green.length}, '
+#                      f'energy: {green.energy}, time: {green.time})')
+#                for it in green:
+#                    print('\tlat: {:2.7f}, lon: {:2.7f}, type: {}'.format(*it))
+#                print('#' * 80)
 
     # usage of DrawSVG class example
     svg = DrawSVG('route_from_depot_to_first_station',

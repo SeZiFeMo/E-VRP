@@ -87,14 +87,14 @@ class Graph(nx.classes.digraph.DiGraph):
 
     @staticmethod
     def assert_graph_is_osm(graph, method_name):
-        """Raise TypeError is self is not an OpenStreetMap graph."""
+        """Raise TypeError if self is not an OpenStreetMap graph."""
         if graph.name != Graph._osm_name:
             raise TypeError(f'Method {method_name}() is callable only '
                             'over OpenStreetMap graphs')
 
     @staticmethod
     def assert_graph_is_abstract(graph, method_name):
-        """Raise TypeError is self is not an abstract graph."""
+        """Raise TypeError if self is not an abstract graph."""
         if graph.name == Graph._osm_name:
             raise TypeError(f'Method {method_name}() is callable only '
                             'over abstract graphs')

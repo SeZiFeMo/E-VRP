@@ -249,9 +249,38 @@ class Route(object):
 
            Raises:
            - UnfeasibleRouteException (without modifing current route)
-           - ValueError if new_node is already in route
         """
-        raise Exception("NOT YET IMPLEMENTED")
+        if self.is_empty():
+            return
+
+        try:
+            id1 = next(index for index, path in enumerate(self._paths)
+                       if path.last_node() == node1)
+            id2 = next(index for index, path in enumerate(self._paths)
+                       if path.last_node() == node2)
+        except StopIteration:
+            # node1 or node2 not found in self._paths
+            return
+
+        if id2 < id1:
+            id1, id2 = id2, id1
+            node1, node2 = node2, node1
+
+        nodes_to_append = [node2]
+        nodes_to_append += [p.last_node() for p in self._paths[id1 + 1:id2]]
+        nodes_to_append += [node1]
+        nodes_to_append += [p.last_node() for p in self._paths[id2 + 1:]]
+
+        # backup and cut paths and batteries
+        path_bkp, batt_bkp = copy.copy(self._paths), copy.copy(self._batteries)
+        self._paths, self._batteries = self._paths[:id1], self._batteries[:id1]
+
+        try:
+            for n in nodes_to_append:
+                self.append(n)
+        except UnfeasibleRouteException as e:
+            self._paths, self._batteries = path_bkp, batt_bkp
+            raise e
 
     @property
     def energy(self):

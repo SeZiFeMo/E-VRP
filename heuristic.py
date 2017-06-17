@@ -60,7 +60,6 @@ class GreedyHeuristic(object):
 
     def create_feasible_route(self):
         current_node = self._depot
-        last_node = None  # FIXME unused variable?
         while True:
             if len(self._customer) == 0:
                 # We have visited all customers: add depot
@@ -80,8 +79,13 @@ class GreedyHeuristic(object):
                 return
             else:
                 IO.Log.debug(f'Successful insert; node {dest}')
-                self._customer.remove(dest)
-                last_node = current_node  # FIXME unused variable?
+                try:
+                    self._customer.remove(dest)
+                except ValueError as e:
+                    if dest == self._depot and len(self._customer) == 0:
+                        return
+                    else:
+                        raise e
                 current_node = dest
 
     def handle_max_time_exceeded(self):

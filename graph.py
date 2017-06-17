@@ -591,4 +591,3 @@ if __name__ == '__main__':
                 f'{initial_sol.energy - meta_sol.energy:>+10.1f} J)')
     DrawSVG('metaheuristic', meta_sol).save()
     IO.Log.info('Created metaheuristic.svg')
->>>>>>> refs/remotes/origin/master

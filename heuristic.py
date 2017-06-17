@@ -43,8 +43,9 @@ class GreedyHeuristic(object):
         self._cache = cache
         self._depot = abstract_g.depot
         self._temp_route = solution.Route(self._cache, greenest=True)
-        self._customer = [(*coor, data['type']) for coor,
-                          data in abstract_g.nodes_iter(data=True) if data['type'] == 'customer']
+        self._customer = [(*coor, data['type'])
+                          for coor, data in abstract_g.nodes_iter(data=True)
+                          if data['type'] == 'customer']
 
         assert self._depot is not None, 'Could not find depot in graph'
 
@@ -59,7 +60,7 @@ class GreedyHeuristic(object):
 
     def create_feasible_route(self):
         current_node = self._depot
-        last_node = None
+        last_node = None  # FIXME unused variable?
         while True:
             dest = self.find_nearest(current_node, 'customer')
             if dest is None:
@@ -79,7 +80,7 @@ class GreedyHeuristic(object):
             else:
                 IO.Log.debug(f'Successful insert; node {dest}')
                 self._customer.remove(dest)
-                last_node = current_node
+                last_node = current_node  # FIXME unused variable?
                 current_node = dest
 
     def handle_max_time_exceeded(self):
@@ -90,8 +91,8 @@ class GreedyHeuristic(object):
             IO.Log.debug('Inserting depot still raises a MaximumTimeException')
             last = self._temp_route.last_node()
             if last is None:
-                raise SystemExit(
-                    f'Max time {self._temp_route.time_limit} too short for this problem!')
+                raise SystemExit(f'Max time {self._temp_route.time_limit} too '
+                                 'short for this problem!')
             else:
                 self._temp_route.remove(last)
             self.handle_max_time_exceeded(self._temp_route)
@@ -101,12 +102,13 @@ class GreedyHeuristic(object):
         try:
             self._temp_route.append(dest)
         except solution.BatteryCriticalException:
-            IO.Log.debug(
-                'Inserting nearest station still raises BatteryCriticalException')
+            IO.Log.debug('Inserting nearest station still raises '
+                         'BatteryCriticalException')
             last = self._temp_route.last_node()
             if last is None:
-                raise SystemExit(
-                    f'Total battery energy {solution.Battery().charge} is too small for this problem!')
+                raise SystemExit('Total battery energy '
+                                 F'{solution.Battery().charge} is too small '
+                                 'for this problem!')
             else:
                 self._temp_route.remove(last)
             self.handle_insufficient_energy(self._temp_route)
@@ -114,29 +116,36 @@ class GreedyHeuristic(object):
     def find_nearest(self, current_node, type_to_find):
         min_time = math.inf
         min_node = None
-        for dest, greenest, shortest in self._cache.source_iterator(current_node):
+        for dest, green, short in self._cache.source_iterator(current_node):
             if type_to_find == 'customer':
-                if dest[2] == type_to_find and dest in self._customer and greenest.time < min_time:
-                    min_time = greenest.time
+                if dest[2] == type_to_find and \
+                   dest in self._customer and \
+                   green.time < min_time:
+                    min_time = green.time
                     min_node = dest
             else:
-                if dest[2] == type_to_find and greenest.time < min_time:
-                    min_time = greenest.time
+                if dest[2] == type_to_find and green.time < min_time:
+                    min_time = green.time
                     min_node = dest
         return min_node
+
 
 def two_opt():
     pass
 
+
 def three_opt():
     pass
+
 
 def move():
     pass
 
+
 neighborhoods = {'2-opt': two_opt,
                  '3-opt': three_opt,
                  'move': move}
+
 
 def metaheuristic(abstract_g, cache):
     """Solve the routing problem expressed with abstract_g and cache.
@@ -160,4 +169,3 @@ def local_search(solution, neighborhood):
     """First-improvement search in the given neighborhood."""
     mod_solution = copy.copy(solution)
     return mod_solution
-

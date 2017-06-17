@@ -62,10 +62,11 @@ class GreedyHeuristic(object):
         current_node = self._depot
         last_node = None  # FIXME unused variable?
         while True:
-            dest = self.find_nearest(current_node, 'customer')
-            if dest is None:
-                # We have visited all customers
-                return
+            if len(self._customer) == 0:
+                # We have visited all customers: add depot
+                dest = self._depot
+            else:
+                dest = self.find_nearest(current_node, 'customer')
             try:
                 self._temp_route.append(dest)
             except solution.BatteryCriticalException:

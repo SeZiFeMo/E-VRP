@@ -192,7 +192,7 @@ class test_greedy_metaheuristic(unittest.TestCase):
         self.heuristic = heuristic.GreedyHeuristic(self.graph, self.cache)
 
     def test_metaheuristic(self):
-        heuristic.metaheuristic(self.graph, self.cache)
+        heuristic.metaheuristic(self.heuristic.create_feasible_solution())
 
 if __name__ == '__main__':
     unittest.main(failfast=False)

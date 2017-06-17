@@ -174,6 +174,13 @@ def two_opt_neighbors(sol):
 
 
 def three_opt_neighbors(sol):
+    """Generator which produces a series of solutions close to the given one.
+
+       (close in neighborhood sense)
+
+       note: https://docs.python.org/3/glossary.html#term-generator
+             https://en.wikipedia.org/wiki/3-opt
+    """
     return iter([])
 
 
@@ -194,7 +201,10 @@ def metaheuristic(initial_solution, max_iter=1000, max_time=60):
        Return the best solution found after max_iter or max_time seconds.
     """
     best_solution = copy.deepcopy(initial_solution)
-    vns_it, t0, explored_solutions = 0, time.time(), 0
+    vns_it = 0
+    best_it = 0
+    t0 = time.time()
+    explored_solutions = 0
     for vns_it in range(max_iter):
         # explore each available neighborhood
         for k, neighbor_generator in neighborhoods.items():
@@ -217,14 +227,18 @@ def metaheuristic(initial_solution, max_iter=1000, max_time=60):
                     delta_energy = neighbor.energy - best_solution.energy
                     delta_time = neighbor.time - best_solution.time
                     IO.Log.info(f'VNS found a better solution '
-                                f'({delta_time:>+10.6f} s, '
+                                f'({delta_time:>+10.6f} m, '
                                 f'{delta_energy:>+10.1f} J)')
                     best_solution = copy.deepcopy(neighbor)
+                    best_it = vns_it
                     break
+        if vns_it >= best_it + 2:
+            IO.Log.debug('two empty iteration')
+            break
 
     t_tot = time.time() - t0
     IO.Log.info('VNS summary:')
-    IO.Log.info(f'{max_iter:>8}     iterations')
+    IO.Log.info(f'{vns_it:>8}     iterations')
     IO.Log.info(f'{t_tot:>12.3f} seconds')
     IO.Log.info(f'{explored_solutions:>8}     explored sol.')
     return best_solution

@@ -568,17 +568,17 @@ if __name__ == '__main__':
     heur = heuristic.GreedyHeuristic(abstract_g, cache)
     initial_sol = heur.create_feasible_solution()
     IO.Log.info('Greedy solution cost        '
-                f'  {initial_sol.time:>9.6f} s, {initial_sol.energy:>10.1f} J')
+                f'  {initial_sol.time:>9.6f} m, {initial_sol.energy:>10.1f} J')
     DrawSVG('heuristic', initial_sol).save()
     IO.Log.info('Created heuristic.svg')
 
     # find better solutions with metaheuristic
-    meta_sol = heuristic.metaheuristic(initial_sol,
-                                       max_iter=10**4, max_time=5)
+    meta_sol = heuristic.metaheuristic(initial_sol, max_iter=10**6,
+                                       max_time=60 * 10)  # 10 minutes
     IO.Log.info('Metaheuristic solution cost '
-                f'  {meta_sol.time:>9.6f} s, {meta_sol.energy:>10.1f} J')
+                f'  {meta_sol.time:>9.6f} m, {meta_sol.energy:>10.1f} J')
     IO.Log.info('Total gain:                 '
-                f'({initial_sol.time - meta_sol.time:>+10.6f} s, '
+                f'({initial_sol.time - meta_sol.time:>+10.6f} m, '
                 f'{initial_sol.energy - meta_sol.energy:>+10.1f} J)')
     DrawSVG('metaheuristic', meta_sol).save()
     IO.Log.info('Created metaheuristic.svg')

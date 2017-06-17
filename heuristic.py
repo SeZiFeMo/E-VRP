@@ -130,7 +130,7 @@ class GreedyHeuristic(object):
         return min_node
 
 
-def two_opt_neighbors(solution):
+def two_opt_neighbors(sol):
     """Generator which produces a series of solutions close to the given one.
 
        (close in neighborhood sense)
@@ -142,42 +142,86 @@ def two_opt_neighbors(solution):
               <~ D   B              <~ D - B
               (A, B, C, D)          (A, C, B, D)
     """
-    for 
-    pass
+    my_sol = copy.deepcopy(sol)
+    for route in my_sol.routes:
+        i = 0
+        while i < len(route._paths) - 2:                          # example:
+            node_i = route._paths[i].last_node()                  # B
+            node_j = route._paths[i + 1].last_node()              # C
+            tail = [p.last_node() for p in route._paths[i + 2:]]  # D
+            # remove B, C, D
+            for node in [node_i, node_j] + tail:
+                try:
+                    route.remove(node)
+                except solution.UnfeasibleRouteException as e:
+                    IO.Log.debug('Unexpected UnfeasibleRouteException while '
+                                 'removing last node from a route! '
+                                 f'({str(e)})')
+                    break
+            else:
+                # append C, B, D
+                for node in [node_j, node_i] + tail:
+                    try:
+                        route.append(node)
+                    except solution.UnfeasibleRouteException as e:
+                        IO.Log.debug(f'Iteration {i} in two_opt_neighbors() '
+                                     'generator got UnfeasibleRouteException: '
+                                     f'{str(e)}')
+                        break
+                else:
+                    yield my_sol
+            i += 1
 
 
-def three_opt():
-    pass
+def three_opt_neighbors(sol):
+    return iter([])
 
 
-def move():
-    pass
+def move_neighbors(sol):
+    return iter([])
 
 
 neighborhoods = {'2-opt': two_opt_neighbors,
-                 '3-opt': three_opt,
-                 'move': move}
+                 '3-opt': three_opt_neighbors,
+                 'move': move_neighbors}
 
 
-def metaheuristic(abstract_g, cache):
-    """Solve the routing problem expressed with abstract_g and cache.
+def metaheuristic(initial_solution, max_iter=1000, max_time=60):
+    """Look (in different initial solution neighborhoods) for better solutions.
 
-    Uses a first-improvement local search."""
-    greedy_heuristic = GreedyHeuristic(abstract_g, cache)
-    initial_solution = greedy_heuristic.create_feasible_solution()
+       (a first improving approach is used in neighborhood exploration)
 
-    max_iteration = 1000
-    it = 0
+       Return the best solution found after max_iter or max_time seconds.
+    """
+    best_solution = copy.copy(initial_solution)
+    vns_it, t0, explored_solutions = 0, time.time(), 0
+    for vns_it in range(max_iter):
+        # explore each available neighborhood
+        for k, neighbor_generator in neighborhoods.items():
+            # explore each solutions in the neighborhood
+            for neighbor in neighbor_generator(best_solution):
+                # exit if time exceeded
+                if time.time() > t0 + max_time:
+                    IO.Log.info(f'VNS returned after {vns_it} iterations and '
+                                f'{max_time:.1f} s (explored solutions: '
+                                f'{explored_solutions}).')
+                    return best_solution
 
-    for it in range(max_iteration):
-        for neigh in neighborhoods:
-            x = local_search(initial_solution, neigh)
-            if x.time < initial_solution.time:
-                initial_solution = x
-                break
+                explored_solutions += 1
+                # break on the first improving one
+                if (neighbor.time < best_solution.time
+                   or (neighbor.time == best_solution.time and
+                       neighbor.energy < best_solution.energy)):
+                    delta_energy = best_solution.energy - neighbor.energy
+                    delta_time = best_solution.time - neighbor.time
+                    IO.Log.info(f'VNS found a better solution'
+                                f'{neighbor.time:>10.6f} s ('
+                                f'{delta_energy:>+9.1f} s, '
+                                f'{delta_time:>+9.6f} J)')
+                    best_solution = copy.copy(neighbor)
+                    break
 
-
-def local_search(solution, neighborhood):
-    """First-improvement search in the given neighborhood."""
-    mod_solution = copy.copy(solution)
-    return mod_solution
+    t_tot = time.time() - t0
+    IO.Log.info(f'VNS returned after {max_iter} iterations and '
+                f'{t_tot:2.3f} s (explored solutions: {explored_solutions}).')
+    return best_solution

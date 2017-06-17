@@ -52,6 +52,10 @@ class Solution(object):
         return all([route.is_feasible() for route in self.routes])
 
     @property
+    def energy(self):
+        return sum([route.energy for route in self.routes])
+
+    @property
     def time(self):
         return sum([route.time for route in self.routes])
 
@@ -193,6 +197,10 @@ class Route(object):
         except UnfeasibleRouteException as e:
             self._paths, self._batteries = path_bkp, batt_bkp
             raise e
+
+    @property
+    def energy(self):
+        return sum([path.energy for path in self._paths])
 
     @property
     def time(self):

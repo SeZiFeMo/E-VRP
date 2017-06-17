@@ -529,14 +529,18 @@ if __name__ == '__main__':
         osm_g = Graph(osm_shapefile=utility.CLI.args().workspace)
         osm_g.label_nodes()
         osm_g.check_problem_solvability()
+        IO.Log.debug('Graph from shapefile passed solvability tests')
 
         abstract_g = Graph(from_DiGraph=osm_g)
+        IO.Log.debug('Created abstract graph')
     except (NameError, RuntimeError, TypeError) as e:
         print(str(e))
         exit(2)
 
-    # Usage example
     cache = CachePaths(abstract_g)
+    IO.Log.debug('Created cache over abstract graph')
+
+    # print all paths starting from depot
 #    for coor, data in abstract_g.nodes_iter(data=True):
 #        src_node = *coor, data['type']
 #        if src_node[2] == 'depot':
@@ -554,8 +558,29 @@ if __name__ == '__main__':
 #                print('#' * 80)
 
     # usage of DrawSVG class example
-    svg = DrawSVG('route_from_depot_to_first_station',
-                  cache.greenest(abstract_g.depot, abstract_g.customers[-1]))
-    svg.add_path(cache.greenest(abstract_g.customers[-1], abstract_g.depot),
-                 color='green')
-    svg.save()
+#    svg = DrawSVG('route_from_depot_to_first_station',
+#                  cache.greenest(abstract_g.depot, abstract_g.customers[-1]))
+#    svg.add_path(cache.greenest(abstract_g.customers[-1], abstract_g.depot),
+#                 color='green')
+#    svg.save()
+
+    # create a greedy heuristic solution
+    heur = heuristic.GreedyHeuristic(abstract_g, cache)
+    initial_sol = heur.create_feasible_solution()
+    DrawSVG('heuristic', initial_sol).save()
+    IO.Log.info('Created heuristic.svg')
+    IO.Log.info('Initial solution cost' + ' ' * 7 +
+                f'{initial_sol.time:>10.6f} s and '
+                f'{initial_sol.energy:>12.1f} J')
+
+    # find better solutions with metaheuristic
+    meta_sol = heuristic.metaheuristic(initial_sol,
+                                       max_iter=10*4, max_time=60)
+    DrawSVG('metaheuristic', meta_sol).save()
+    IO.Log.info('Created metaheuristic.svg')
+    IO.Log.info('Metaheuristic solution cost '
+                f'{meta_sol.time:>10.6f} s and '
+                f'{meta_sol.energy:>12.1f} J')
+    IO.Log.info('Cost gain:' + ' ' * 18 +
+                f'{initial_sol.time - meta_sol.time:>10.6f} s and '
+                f'{initial_sol.energy - meta_sol.energy:>12.1f} J')

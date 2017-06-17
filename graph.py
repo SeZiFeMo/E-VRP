@@ -577,8 +577,7 @@ if __name__ == '__main__':
     IO.Log.info('Created heuristic.svg')
 
     # find better solutions with metaheuristic
-    meta_sol = heuristic.metaheuristic(initial_sol, max_iter=10**6,
-                                       max_time=60 * 10)  # 10 minutes
+    meta_sol = heuristic.metaheuristic(initial_sol, max_iter=10**6)
     IO.Log.info('Metaheuristic solution cost '
                 f'  {meta_sol.time:>9.6f} m, {meta_sol.energy:>10.1f} J')
     IO.Log.info('Total gain:                 '

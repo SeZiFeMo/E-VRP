@@ -109,6 +109,9 @@ class Route(object):
         else:
             src_node, batt = self.last_node(), copy.copy(self.last_battery())
 
+        if src_node == dest_node:
+            return
+
         path = self.default_path(src_node, dest_node)
 
         if path.time + sum(p.time for p in self._paths) > self.time_limit:

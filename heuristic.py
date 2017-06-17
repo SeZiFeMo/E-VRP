@@ -196,12 +196,9 @@ def move_neighbors(sol):
     for route in mod_sol.routes:
         for i in range(len(route._paths) - 2):
             node_i = copy.deepcopy(route._paths[i].last_node())
-            for j in range(i, (len(route._paths) - 2)):
-                node_j = copy.deepcopy(route._paths[j].last_node())
+            for j in range(len(route._paths) - 2):
                 try:
                     route.remove(node_i)
-                    route.insert(node_j, i)
-                    route.remove(node_j)
                     route.insert(node_i, j)
                 except solution.UnfeasibleRouteException as e:
                     IO.Log.debug(f'Move ({i},{j}) is not feasible')
@@ -209,10 +206,36 @@ def move_neighbors(sol):
                 else:
                     yield mod_sol
 
-
+def swap_neighbors(sol):
+    """Generator that produces a swap neighborhood of the given one."""
+    mod_sol = copy.deepcopy(sol)
+    for route in mod_sol.routes:
+        for i in range(len(route._paths) - 2):
+            node_i = copy.deepcopy(route._paths[i].last_node())
+            for j in range(i, (len(route._paths) - 2)):
+                node_j = copy.deepcopy(route._paths[j].last_node())
+                try:
+                    route.remove(node_j)
+                    route.remove(node_i)
+                    # FIXME controlla gli indici: del resto ho tolto due nodi
+                    # i is always smaller than j, so the following operations
+                    # will correctly swap the two nodes
+                    # route = [a, b, c, d, e]
+                    # i = 2, j = 4
+                    # remove(e) --> [a, b, c, d]
+                    # remove(c) --> [a, b, d]
+                    # insert(e, 2) --> [a, b, e, d]
+                    # insert(c, 4) --> [a, b, e, d, c]
+                    route.insert(node_j, i)
+                    route.insert(node_i, j)
+                except solution.UnfeasibleRouteException as e:
+                    IO.Log.debug(f'Move ({i},{j}) is not feasible')
+                    continue
+                else:
+                    yield mod_sol
 
 neighborhoods = {'2-opt': two_opt_neighbors,
-                 '3-opt': three_opt_neighbors,
+                 'swap': swap_neighbors,
                  'move': move_neighbors}
 
 

@@ -554,8 +554,12 @@ if __name__ == '__main__':
 #                print('#' * 80)
 
     # usage of DrawSVG class example
+    colors = {'blue': '#0066ff', 'orange': '#ff7f0e', 'green': '#00b300',
+              'red': '#d62c27', 'magenta': '#ff47af', 'azure': '#17becf',
+              'violet': '#8f5cbd', 'olive': '#adad1f'}
+
     svg = DrawSVG('route_from_depot_to_first_station',
-                  cache.greenest(abstract_g.depot, abstract_g.customers[-1]))
+                  cache.greenest(abstract_g.depot, abstract_g.customers[-1]),color=colors['olive'])
     svg.add_path(cache.greenest(abstract_g.customers[-1], abstract_g.depot),
-                 color='green')
+                 color=colors['azure'])
     svg.save()

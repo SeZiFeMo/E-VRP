@@ -42,7 +42,7 @@ import math
 import matplotlib.pyplot as plt
 import networkx as nx
 import warnings
-import profile
+import cProfile
 
 import heuristic
 import IO
@@ -588,4 +588,4 @@ def main():
 
 # ----------------------------------- MAIN ---------------------------------- #
 if __name__ == '__main__':
-    profile.run('main()')
+    cProfile.run('main()',filename='deterministic_10min')

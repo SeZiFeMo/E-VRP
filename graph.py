@@ -404,7 +404,10 @@ class CachePaths(object):
 class DrawSVG(object):
     """Create an svg file from either a solution or a route or a path."""
 
-    colors = ('blue', 'green', 'yellow')
+    colors = {'blue': '#0066ff', 'orange': '#ff7f0e', 'green': '#00b300',
+              'red': '#d62c27', 'magenta': '#ff47af', 'azure': '#17becf',
+              'violet': '#8f5cbd', 'olive': '#adad1f', 'black': '#000000',
+              'yellow': '#ffd700'}
 
     def __init__(self, path, obj, draw_whole_graph=True, color='red'):
         """Create an svg file from passed obj.
@@ -422,19 +425,19 @@ class DrawSVG(object):
             if draw_whole_graph:
                 self.add_graph_on_background()
 
-            self.add_solution(obj, color=color)
+            self.add_solution(obj, color=self.colors[color])
         elif isinstance(obj, solution.Route):
             self.graph = obj._graph_cache.graph
             if draw_whole_graph:
                 self.add_graph_on_background()
 
-            self.add_route(obj, color=color)
+            self.add_route(obj, color=self.colors[color])
         elif isinstance(obj, solution.Path):
             self.graph = obj._graph
             if draw_whole_graph:
                 self.add_graph_on_background()
 
-            self.add_path(obj, color=color)
+            self.add_path(obj, color=self.colors[color])
         else:
             raise TypeError('obj passed to DrawSVG() is not a Solution or a '
                             'Route or a Path')
@@ -445,12 +448,13 @@ class DrawSVG(object):
     def add_solution(self, solution, color='black'):
         """Add solution to SVG."""
         for index, route in enumerate(solution.routes):
-            self.add_route(route, color=self.colors[index % len(self.colors)])
+            color = list(self.colors.values())[index % len(self.colors)]
+            self.add_route(route, color=color)
 
     def add_route(self, route, color='black'):
         """Add route to SVG."""
         for path in route._paths:
-            self.add_path(path, color=color)
+            self.add_path(path, color=self.colors[color])
 
     def add_path(self, path, color='black'):
         """Add path to SVG."""
@@ -458,7 +462,8 @@ class DrawSVG(object):
             self.add_node(node)
         for i, src in enumerate(path._nodes[:-1]):
             dest = path._nodes[i + 1]
-            self.add_edge(src, dest, color=color, penwidth='5', style='solid')
+            self.add_edge(src, dest, color=self.colors[color], penwidth='5',
+                          style='solid')
 
     def add_graph_on_background(self):
         for coor, data in self.graph.nodes_iter(data=True):
@@ -471,13 +476,13 @@ class DrawSVG(object):
     def add_node(self, node):
         lat, lon, lab = node
         if lab == 'depot':
-            shape, color = 'square', 'red'
+            shape, color = 'square', self.colors['red']
         elif lab == 'customer':
-            shape, color = 'star', 'orange'
+            shape, color = 'star', self.colors['orange']
         elif lab == 'station':
-            shape, color = 'diamond', 'blue'
+            shape, color = 'diamond', self.colors['blue']
         else:
-            shape, color = 'circle', 'black'
+            shape, color = 'circle', self.colors['black']
         label = lab + f'\nLat:  {lat:2.7f}\nLon: {lon:2.7f} \n\n\n\n\n '
         self.draw_graph.node(str((lat, lon)), shape=shape, color=color,
                              label=label, fixedsize='true', style='filled',
@@ -487,7 +492,8 @@ class DrawSVG(object):
 
     def add_edge(self, src, dest, color='black', penwidth='1', style='dotted'):
         self.draw_graph.edge(str(src[:2]), str(dest[:2]),
-                             color=color, penwidth=penwidth, style=style)
+                             color=self.colors[color], penwidth=penwidth,
+                             style=style)
 
     def coordinates_to_position(self, lat, lon, ppi=72):
         """Return position in points."""
@@ -556,22 +562,6 @@ if __name__ == '__main__':
 #                for it in green:
 #                    print('\tlat: {:2.7f}, lon: {:2.7f}, type: {}'.format(*it))
 #                print('#' * 80)
-
-    # usage of DrawSVG class example
-    colors = {'blue': '#0066ff', 'orange': '#ff7f0e', 'green': '#00b300',
-              'red': '#d62c27', 'magenta': '#ff47af', 'azure': '#17becf',
-              'violet': '#8f5cbd', 'olive': '#adad1f'}
-
-    svg = DrawSVG('route_from_depot_to_first_station',
-                  cache.greenest(abstract_g.depot, abstract_g.customers[-1]),color=colors['olive'])
-    svg.add_path(cache.greenest(abstract_g.customers[-1], abstract_g.depot),
-                 color=colors['azure'])
-    svg.save()
-#    svg = DrawSVG('route_from_depot_to_first_station',
-#                  cache.greenest(abstract_g.depot, abstract_g.customers[-1]))
-#    svg.add_path(cache.greenest(abstract_g.customers[-1], abstract_g.depot),
-#                 color='green')
-#    svg.save()
 
     # create a greedy heuristic solution
     heur = heuristic.GreedyHeuristic(abstract_g, cache)

@@ -65,7 +65,6 @@ class GreedyHeuristic(object):
             if len(self._customer) == 0:
                 # We have visited all customers: add depot
                 dest = self._depot
-                return
             else:
                 dest = self.find_nearest(current_node, 'customer')
             try:

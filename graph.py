@@ -42,6 +42,7 @@ import math
 import matplotlib.pyplot as plt
 import networkx as nx
 import warnings
+import profile
 
 import heuristic
 import IO
@@ -507,8 +508,7 @@ class DrawSVG(object):
         return str('%(x)f,%(y)f!' % {'x': x / 10, 'y': y / 10})  # why 10 ?
 
 
-# ----------------------------------- MAIN ---------------------------------- #
-if __name__ == '__main__':
+def main():
     try:
         if utility.CLI.args().import_file:
             IO.import_shapefile_to_workspace(exit_on_success=True)
@@ -583,7 +583,7 @@ if __name__ == '__main__':
 
     # find better solutions with metaheuristic
     meta_sol = heuristic.metaheuristic(initial_sol, max_iter=10**6,
-                                       max_time=60 * 10)  # 10 minutes
+                                       max_time=60 * 10)  # 1 minute
     IO.Log.info('Metaheuristic solution cost '
                 f'  {meta_sol.time:>9.6f} m, {meta_sol.energy:>10.1f} J')
     IO.Log.info('Total gain:                 '
@@ -591,4 +591,7 @@ if __name__ == '__main__':
                 f'{initial_sol.energy - meta_sol.energy:>+10.1f} J)')
     DrawSVG('metaheuristic', meta_sol).save()
     IO.Log.info('Created metaheuristic.svg')
->>>>>>> refs/remotes/origin/master
+
+# ----------------------------------- MAIN ---------------------------------- #
+if __name__ == '__main__':
+    profile.run('main()')

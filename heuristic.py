@@ -65,6 +65,7 @@ class GreedyHeuristic(object):
             if len(self._customer) == 0:
                 # We have visited all customers: add depot
                 dest = self._depot
+                return
             else:
                 dest = self.find_nearest(current_node, 'customer')
             try:
@@ -186,7 +187,24 @@ def three_opt_neighbors(sol):
 
 
 def move_neighbors(sol):
-    return iter([])
+    """Generator that produces a move neighborhood of the given one."""
+    mod_sol = copy.deepcopy(sol)
+    for route in mod_sol.routes:
+        for i in range(len(route._paths) - 2):
+            node_i = copy.deepcopy(route._paths[i].last_node())
+            for j in range(i, (len(route._paths) - 2)):
+                node_j = copy.deepcopy(route._paths[j].last_node())
+                try:
+                    route.remove(node_i)
+                    route.insert(node_j, i)
+                    route.remove(node_j)
+                    route.insert(node_i, j)
+                except solution.UnfeasibleRouteException as e:
+                    IO.Log.debug(f'Move ({i},{j}) is not feasible')
+                    continue
+                else:
+                    yield mod_sol
+
 
 
 neighborhoods = {'2-opt': two_opt_neighbors,
@@ -201,38 +219,28 @@ def metaheuristic(initial_solution, max_iter=1000, max_time=60):
 
        Return the best solution found after max_iter or max_time seconds.
     """
-    best_solution = copy.deepcopy(initial_solution)
+    actual_solution = copy.deepcopy(initial_solution)
     vns_it = 0
     best_it = 0
     t0 = time.time()
-    explored_solutions = 0
+    explored_solutions = None
     for vns_it in range(max_iter):
+        # exit if time exceeded
+        if time.time() > t0 + max_time:
+            t_tot = time.time() - t0
+            IO.Log.info('VNS summary:')
+            IO.Log.info(f'{vns_it:>8}     iterations')
+            IO.Log.info(f'{t_tot:>12.3f} seconds')
+            IO.Log.info(f'{explored_solutions:>8}     explored sol.')
+            return actual_solution
+
         # explore each available neighborhood
         for k, neighbor_generator in neighborhoods.items():
             # explore each solutions in the neighborhood
-            for neighbor in neighbor_generator(best_solution):
-                # exit if time exceeded
-                if time.time() > t0 + max_time:
-                    t_tot = time.time() - t0
-                    IO.Log.info('VNS summary:')
-                    IO.Log.info(f'{vns_it:>8}     iterations')
-                    IO.Log.info(f'{t_tot:>12.3f} seconds')
-                    IO.Log.info(f'{explored_solutions:>8}     explored sol.')
-                    return best_solution
-
-                explored_solutions += 1
-                # break on the first improving one
-                if (neighbor.time < best_solution.time
-                   or (neighbor.time == best_solution.time and
-                       neighbor.energy < best_solution.energy)):
-                    delta_energy = neighbor.energy - best_solution.energy
-                    delta_time = neighbor.time - best_solution.time
-                    IO.Log.info(f'VNS found a better solution '
-                                f'({delta_time:>+10.6f} m, '
-                                f'{delta_energy:>+10.1f} J)')
-                    best_solution = copy.deepcopy(neighbor)
-                    best_it = vns_it
-                    break
+            sol = local_search(actual_solution, neighbor_generator)
+            if sol is not None:
+                actual_solution, explored_solutions = sol
+            best_it = vns_it
         if vns_it >= best_it + 2:
             IO.Log.debug('two empty iteration')
             break
@@ -242,4 +250,20 @@ def metaheuristic(initial_solution, max_iter=1000, max_time=60):
     IO.Log.info(f'{vns_it:>8}     iterations')
     IO.Log.info(f'{t_tot:>12.3f} seconds')
     IO.Log.info(f'{explored_solutions:>8}     explored sol.')
-    return best_solution
+    return actual_solution
+
+def local_search(actual_solution, neighborhood):
+    explored_solutions = 0
+    for neighbor in neighborhood(actual_solution):
+        explored_solutions += 1
+        # break on the first improving one
+        if (neighbor.time < actual_solution.time
+           or (neighbor.time == actual_solution.time and
+               neighbor.energy < actual_solution.energy)):
+            delta_energy = neighbor.energy - actual_solution.energy
+            delta_time = neighbor.time - actual_solution.time
+            IO.Log.info(f'VNS found a better solution '
+                        f'({delta_time:>+10.6f} m, '
+                        f'{delta_energy:>+10.1f} J)')
+            return copy.deepcopy(neighbor), explored_solutions
+    return None

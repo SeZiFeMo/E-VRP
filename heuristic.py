@@ -32,8 +32,9 @@ import math
 import time
 import copy
 
-import solution
 import IO
+import solution
+import utility
 
 
 class GreedyHeuristic(object):
@@ -60,7 +61,6 @@ class GreedyHeuristic(object):
 
     def create_feasible_route(self):
         current_node = self._depot
-        last_node = None  # FIXME unused variable?
         while True:
             if len(self._customer) == 0:
                 # We have visited all customers: add depot
@@ -81,8 +81,13 @@ class GreedyHeuristic(object):
                 return
             else:
                 IO.Log.debug(f'Successful insert; node {dest}')
-                self._customer.remove(dest)
-                last_node = current_node  # FIXME unused variable?
+                try:
+                    self._customer.remove(dest)
+                except ValueError as e:
+                    if dest == self._depot and len(self._customer) == 0:
+                        return
+                    else:
+                        raise e
                 current_node = dest
 
     def handle_max_time_exceeded(self):
@@ -212,13 +217,14 @@ neighborhoods = {'2-opt': two_opt_neighbors,
                  'move': move_neighbors}
 
 
-def metaheuristic(initial_solution, max_iter=1000, max_time=60):
+def metaheuristic(initial_solution, max_iter=1000):
     """Look (in different initial solution neighborhoods) for better solutions.
 
        (a first improving approach is used in neighborhood exploration)
 
        Return the best solution found after max_iter or max_time seconds.
     """
+    max_time = utility.CLI.args().max_time
     actual_solution = copy.deepcopy(initial_solution)
     vns_it = 0
     best_it = 0
@@ -241,8 +247,8 @@ def metaheuristic(initial_solution, max_iter=1000, max_time=60):
             if sol is not None:
                 actual_solution, explored_solutions = sol
             best_it = vns_it
-        if vns_it >= best_it + 2:
-            IO.Log.debug('two empty iteration')
+        if vns_it >= best_it + 3:
+            IO.Log.debug(f'{vns_it - best_it} empty iteration')
             break
 
     t_tot = time.time() - t0

@@ -405,7 +405,10 @@ class CachePaths(object):
 class DrawSVG(object):
     """Create an svg file from either a solution or a route or a path."""
 
-    colors = ('blue', 'green', 'yellow')
+    colors = {'blue': '#0066ff', 'orange': '#ff7f0e', 'green': '#00b300',
+              'red': '#d62c27', 'magenta': '#ff47af', 'azure': '#17becf',
+              'violet': '#8f5cbd', 'olive': '#adad1f', 'black': '#000000',
+              'yellow': '#ffd700'}
 
     def __init__(self, path, obj, draw_whole_graph=True, color='red'):
         """Create an svg file from passed obj.
@@ -440,13 +443,20 @@ class DrawSVG(object):
             raise TypeError('obj passed to DrawSVG() is not a Solution or a '
                             'Route or a Path')
 
+    def resolve_color(self, label):
+        if label in self.colors:
+            return self.colors[label]
+        else:
+            return label
+
     def save(self, view=False, cleanup=True):
         self.draw_graph.render(filename=self.path, view=view, cleanup=cleanup)
 
     def add_solution(self, solution, color='black'):
         """Add solution to SVG."""
         for index, route in enumerate(solution.routes):
-            self.add_route(route, color=self.colors[index % len(self.colors)])
+            color = list(self.colors.values())[index % len(self.colors)]
+            self.add_route(route, color=color)
 
     def add_route(self, route, color='black'):
         """Add route to SVG."""
@@ -469,7 +479,7 @@ class DrawSVG(object):
             for dest, data in adj_dict.items():
                 self.add_edge(src, dest)
 
-    def add_node(self, node):
+    def add_node(self, node, color='black'):
         lat, lon, lab = node
         if lab == 'depot':
             shape, color = 'square', 'red'
@@ -480,15 +490,16 @@ class DrawSVG(object):
         else:
             shape, color = 'circle', 'black'
         label = lab + f'\nLat:  {lat:2.7f}\nLon: {lon:2.7f} \n\n\n\n\n '
-        self.draw_graph.node(str((lat, lon)), shape=shape, color=color,
+        self.draw_graph.node(str((lat, lon)), shape=shape, fontsize='18',
+                             color=self.resolve_color(color),
                              label=label, fixedsize='true', style='filled',
-                             fontsize='18',
                              size='0.5',  # height and width of shape in inch
                              pos=self.coordinates_to_position(lat, lon))
 
     def add_edge(self, src, dest, color='black', penwidth='1', style='dotted'):
         self.draw_graph.edge(str(src[:2]), str(dest[:2]),
-                             color=color, penwidth=penwidth, style=style)
+                             color=self.resolve_color(color),
+                             penwidth=penwidth, style=style)
 
     def coordinates_to_position(self, lat, lon, ppi=72):
         """Return position in points."""
@@ -557,22 +568,6 @@ def main():
 #                    print('\tlat: {:2.7f}, lon: {:2.7f}, type: {}'.format(*it))
 #                print('#' * 80)
 
-    # usage of DrawSVG class example
-    colors = {'blue': '#0066ff', 'orange': '#ff7f0e', 'green': '#00b300',
-              'red': '#d62c27', 'magenta': '#ff47af', 'azure': '#17becf',
-              'violet': '#8f5cbd', 'olive': '#adad1f'}
-
-    svg = DrawSVG('route_from_depot_to_first_station',
-                  cache.greenest(abstract_g.depot, abstract_g.customers[-1]),color=colors['olive'])
-    svg.add_path(cache.greenest(abstract_g.customers[-1], abstract_g.depot),
-                 color=colors['azure'])
-    svg.save()
-#    svg = DrawSVG('route_from_depot_to_first_station',
-#                  cache.greenest(abstract_g.depot, abstract_g.customers[-1]))
-#    svg.add_path(cache.greenest(abstract_g.customers[-1], abstract_g.depot),
-#                 color='green')
-#    svg.save()
-
     # create a greedy heuristic solution
     heur = heuristic.GreedyHeuristic(abstract_g, cache)
     initial_sol = heur.create_feasible_solution()
@@ -582,8 +577,7 @@ def main():
     IO.Log.info('Created heuristic.svg')
 
     # find better solutions with metaheuristic
-    meta_sol = heuristic.metaheuristic(initial_sol, max_iter=10**6,
-                                       max_time=60 * 10)  # 1 minute
+    meta_sol = heuristic.metaheuristic(initial_sol, max_iter=10**6)
     IO.Log.info('Metaheuristic solution cost '
                 f'  {meta_sol.time:>9.6f} m, {meta_sol.energy:>10.1f} J')
     IO.Log.info('Total gain:                 '

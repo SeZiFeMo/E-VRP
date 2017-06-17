@@ -130,7 +130,19 @@ class GreedyHeuristic(object):
         return min_node
 
 
-def two_opt():
+def two_opt_neighbors(solution):
+    """Generator which produces a series of solutions close to the given one.
+
+       (close in neighborhood sense)
+
+       note: https://docs.python.org/3/glossary.html#term-generator
+             https://en.wikipedia.org/wiki/2-opt
+              ~> A   C              ~> A - C
+                   X ↑    becomes          ↓
+              <~ D   B              <~ D - B
+              (A, B, C, D)          (A, C, B, D)
+    """
+    for 
     pass
 
 
@@ -142,7 +154,7 @@ def move():
     pass
 
 
-neighborhoods = {'2-opt': two_opt,
+neighborhoods = {'2-opt': two_opt_neighbors,
                  '3-opt': three_opt,
                  'move': move}
 

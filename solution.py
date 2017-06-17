@@ -120,6 +120,45 @@ class Route(object):
         self._paths.append(path)
         self._batteries.append(batt)
 
+    def insert(self, node, pos):
+        """Add to route the path to reach the given node in position pos.
+
+           node is a tuple of three elements: (latitude, longitude, type)
+
+           Example:
+           route = [ Path_from_A_to_B, ... Path_from_L_to_M ]
+           route.insert((lat_N, lon_N, type_N), 1)
+           route = [ Path_from_A_to_N, Path_from_N_to_B, ... Path_from_L_to_M ]
+
+           Raises:
+           - UnfeasibleRouteException (without modifing current route)
+           - ValueError if nor greenest or shortest flags is set or pos < 0
+        """
+        if pos < 0:
+            raise ValueError('Negative positions are not allowed')
+
+        if self.is_empty() or pos >= len(self._paths):
+            self.append(node)
+            return
+
+        # backup paths and batteries
+        path_bkp, batt_bkp = copy.copy(self._paths), copy.copy(self._batteries)
+
+        if node in [path.last_node() for path in self._paths]:
+            self.remove(node)
+
+        nodes_to_append = [node] + [p.last_node() for p in self._paths[pos:]]
+
+        # cut paths and batteries
+        self._paths, self._batteries = self._paths[:pos], self._batteries[:pos]
+
+        try:
+            for n in nodes_to_append:
+                self.append(n)
+        except UnfeasibleRouteException as e:
+            self._paths, self._batteries = path_bkp, batt_bkp
+            raise e
+
     def remove(self, rm_node):
         """Remove the first path ending with rm_node and the next one.
 
@@ -197,6 +236,22 @@ class Route(object):
         except UnfeasibleRouteException as e:
             self._paths, self._batteries = path_bkp, batt_bkp
             raise e
+
+    def swap(self, node1, node2):
+        """Swap the two given nodes.
+
+           node1 and node2 are tuples of three elements: (lat, lon, type)
+
+           Example:
+           route = [ Path_A_B, Path_from_B_C, ... Path_L_M, Path_M_N, ... ]
+           route.substitute((lat_B, lon_B, type_B), (lat_M, lon_M, type_M))
+           route = [ Path_A_M, Path_from_M_C, ... Path_L_B, Path_B_N, ... ]
+
+           Raises:
+           - UnfeasibleRouteException (without modifing current route)
+           - ValueError if new_node is already in route
+        """
+        raise Exception("NOT YET IMPLEMENTED")
 
     @property
     def energy(self):

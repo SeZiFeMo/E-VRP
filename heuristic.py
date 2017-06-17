@@ -193,7 +193,7 @@ def metaheuristic(initial_solution, max_iter=1000, max_time=60):
 
        Return the best solution found after max_iter or max_time seconds.
     """
-    best_solution = copy.copy(initial_solution)
+    best_solution = copy.deepcopy(initial_solution)
     vns_it, t0, explored_solutions = 0, time.time(), 0
     for vns_it in range(max_iter):
         # explore each available neighborhood
@@ -202,9 +202,11 @@ def metaheuristic(initial_solution, max_iter=1000, max_time=60):
             for neighbor in neighbor_generator(best_solution):
                 # exit if time exceeded
                 if time.time() > t0 + max_time:
-                    IO.Log.info(f'VNS returned after {vns_it} iterations and '
-                                f'{max_time:.1f} s (explored solutions: '
-                                f'{explored_solutions}).')
+                    t_tot = time.time() - t0
+                    IO.Log.info('VNS summary:')
+                    IO.Log.info(f'{vns_it:>8}     iterations')
+                    IO.Log.info(f'{t_tot:>12.3f} seconds')
+                    IO.Log.info(f'{explored_solutions:>8}     explored sol.')
                     return best_solution
 
                 explored_solutions += 1
@@ -212,16 +214,17 @@ def metaheuristic(initial_solution, max_iter=1000, max_time=60):
                 if (neighbor.time < best_solution.time
                    or (neighbor.time == best_solution.time and
                        neighbor.energy < best_solution.energy)):
-                    delta_energy = best_solution.energy - neighbor.energy
-                    delta_time = best_solution.time - neighbor.time
-                    IO.Log.info(f'VNS found a better solution'
-                                f'{neighbor.time:>10.6f} s ('
-                                f'{delta_energy:>+9.1f} s, '
-                                f'{delta_time:>+9.6f} J)')
-                    best_solution = copy.copy(neighbor)
+                    delta_energy = neighbor.energy - best_solution.energy
+                    delta_time = neighbor.time - best_solution.time
+                    IO.Log.info(f'VNS found a better solution '
+                                f'({delta_time:>+10.6f} s, '
+                                f'{delta_energy:>+10.1f} J)')
+                    best_solution = copy.deepcopy(neighbor)
                     break
 
     t_tot = time.time() - t0
-    IO.Log.info(f'VNS returned after {max_iter} iterations and '
-                f'{t_tot:2.3f} s (explored solutions: {explored_solutions}).')
+    IO.Log.info('VNS summary:')
+    IO.Log.info(f'{max_iter:>8}     iterations')
+    IO.Log.info(f'{t_tot:>12.3f} seconds')
+    IO.Log.info(f'{explored_solutions:>8}     explored sol.')
     return best_solution

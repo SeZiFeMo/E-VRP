@@ -425,22 +425,28 @@ class DrawSVG(object):
             if draw_whole_graph:
                 self.add_graph_on_background()
 
-            self.add_solution(obj, color=self.colors[color])
+            self.add_solution(obj, color=color)
         elif isinstance(obj, solution.Route):
             self.graph = obj._graph_cache.graph
             if draw_whole_graph:
                 self.add_graph_on_background()
 
-            self.add_route(obj, color=self.colors[color])
+            self.add_route(obj, color=color)
         elif isinstance(obj, solution.Path):
             self.graph = obj._graph
             if draw_whole_graph:
                 self.add_graph_on_background()
 
-            self.add_path(obj, color=self.colors[color])
+            self.add_path(obj, color=color)
         else:
             raise TypeError('obj passed to DrawSVG() is not a Solution or a '
                             'Route or a Path')
+
+    def resolve_color(self, label):
+        if label in self.colors:
+            return self.colors[label]
+        else:
+            return label
 
     def save(self, view=False, cleanup=True):
         self.draw_graph.render(filename=self.path, view=view, cleanup=cleanup)
@@ -454,7 +460,7 @@ class DrawSVG(object):
     def add_route(self, route, color='black'):
         """Add route to SVG."""
         for path in route._paths:
-            self.add_path(path, color=self.colors[color])
+            self.add_path(path, color=color)
 
     def add_path(self, path, color='black'):
         """Add path to SVG."""
@@ -462,8 +468,7 @@ class DrawSVG(object):
             self.add_node(node)
         for i, src in enumerate(path._nodes[:-1]):
             dest = path._nodes[i + 1]
-            self.add_edge(src, dest, color=self.colors[color], penwidth='5',
-                          style='solid')
+            self.add_edge(src, dest, color=color, penwidth='5', style='solid')
 
     def add_graph_on_background(self):
         for coor, data in self.graph.nodes_iter(data=True):
@@ -473,27 +478,27 @@ class DrawSVG(object):
             for dest, data in adj_dict.items():
                 self.add_edge(src, dest)
 
-    def add_node(self, node):
+    def add_node(self, node, color='black'):
         lat, lon, lab = node
         if lab == 'depot':
-            shape, color = 'square', self.colors['red']
+            shape, color = 'square', 'red'
         elif lab == 'customer':
-            shape, color = 'star', self.colors['orange']
+            shape, color = 'star', 'orange'
         elif lab == 'station':
-            shape, color = 'diamond', self.colors['blue']
+            shape, color = 'diamond', 'blue'
         else:
-            shape, color = 'circle', self.colors['black']
+            shape, color = 'circle', 'black'
         label = lab + f'\nLat:  {lat:2.7f}\nLon: {lon:2.7f} \n\n\n\n\n '
-        self.draw_graph.node(str((lat, lon)), shape=shape, color=color,
+        self.draw_graph.node(str((lat, lon)), shape=shape, fontsize='18',
+                             color=self.resolve_color(color),
                              label=label, fixedsize='true', style='filled',
-                             fontsize='18',
                              size='0.5',  # height and width of shape in inch
                              pos=self.coordinates_to_position(lat, lon))
 
     def add_edge(self, src, dest, color='black', penwidth='1', style='dotted'):
         self.draw_graph.edge(str(src[:2]), str(dest[:2]),
-                             color=self.colors[color], penwidth=penwidth,
-                             style=style)
+                             color=self.resolve_color(color),
+                             penwidth=penwidth, style=style)
 
     def coordinates_to_position(self, lat, lon, ppi=72):
         """Return position in points."""

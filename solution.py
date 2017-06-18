@@ -253,7 +253,7 @@ class Route(object):
            Raises:
            - UnfeasibleRouteException (without modifing current route)
         """
-        if self.is_empty():
+        if self.is_empty() or node1 == node2:
             return
 
         try:

@@ -191,7 +191,7 @@ def three_opt_neighbors(sol):
 
 
 def move_neighbors(sol):
-    """Generator that produces a move neighborhood of the given one."""
+    """Generator which produces a move neighborhood of the given solution."""
     mod_sol = copy.deepcopy(sol)
     for route in mod_sol.routes:
         for i in range(len(route._paths) - 2):
@@ -206,33 +206,25 @@ def move_neighbors(sol):
                 else:
                     yield mod_sol
 
+
 def swap_neighbors(sol):
-    """Generator that produces a swap neighborhood of the given one."""
+    """Generator which produces a swap neighborhood of the given solution."""
     mod_sol = copy.deepcopy(sol)
     for route in mod_sol.routes:
-        for i in range(len(route._paths) - 2):
-            node_i = copy.deepcopy(route._paths[i].last_node())
-            for j in range(i, (len(route._paths) - 2)):
-                node_j = copy.deepcopy(route._paths[j].last_node())
+        for i in range(len(route._paths) - 1):
+            node_i = route._paths[i].last_node()
+            for j in range(i + 1, len(route._paths)):
+                node_j = route._paths[j].last_node()
                 try:
-                    route.remove(node_j)
-                    route.remove(node_i)
-                    # FIXME controlla gli indici: del resto ho tolto due nodi
-                    # i is always smaller than j, so the following operations
-                    # will correctly swap the two nodes
-                    # route = [a, b, c, d, e]
-                    # i = 2, j = 4
-                    # remove(e) --> [a, b, c, d]
-                    # remove(c) --> [a, b, d]
-                    # insert(e, 2) --> [a, b, e, d]
-                    # insert(c, 4) --> [a, b, e, d, c]
-                    route.insert(node_j, i)
-                    route.insert(node_i, j)
+                    route.swap(node_i, node_j)
                 except solution.UnfeasibleRouteException as e:
-                    IO.Log.debug(f'Move ({i},{j}) is not feasible')
+                    IO.Log.debug(f'Swap between node {i} ({node_i}) and '
+                                 f'node {j} ({node_j}) is not feasible '
+                                 f'({str(e)})')
                     continue
                 else:
                     yield mod_sol
+
 
 neighborhoods = {'2-opt': two_opt_neighbors,
                  'swap': swap_neighbors,

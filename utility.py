@@ -25,6 +25,7 @@
 """
 
 import argparse
+import random
 import sys
 
 __authors__ = "Serena Ziviani, Federico Motta"
@@ -55,6 +56,14 @@ def energy(rise, length, consumption, weight, **kwargs):
     theta = -2 / 3 if rise < 0 else 1
     consumption *= 36000  # kW⋅h/100km  to  J/km
     return consumption * length + theta * weight * 9.81 * rise
+
+
+def shuffled_range(*args):
+    """Return iterator over a range shuffled randomly."""
+    l = list(range(*args))
+    random.seed(999)
+    random.shuffle(l, random.random)
+    return iter(l)
 
 
 class CLI(object):

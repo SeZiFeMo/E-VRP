@@ -54,10 +54,13 @@ class GreedyHeuristic(object):
         """Build a feasible, greedy solution for the problem."""
         sol = solution.Solution(self._abstract_g, self._cache)
         # While customers are not all served:
-        while len(self._customer) > 0:
+        while self._customer:
             self.create_feasible_route()
             sol.routes.append(self._temp_route)
             self._temp_route = solution.Route(self._cache, greenest=True)
+        assert not sol.missing_customers(), 'self._customer is empty ' \
+                                            'even if sol.missing_customers() '\
+                                            'is not'
         return sol
 
     def create_feasible_route(self):
@@ -358,6 +361,9 @@ def local_search(actual_solution, neighborhood):
             IO.Log.info(f'VNS found a better solution '
                         f'({delta_time:>+10.6f} m, '
                         f'{delta_energy:>+10.1f} J)')
+            assert not neighbor.missing_customers(), 'There are some ' \
+                                                     'customers left out'
+            assert neighbor.is_feasible(), 'neighbor found is not feasible'
             return copy.deepcopy(neighbor), num_explored_solutions
     # Could not find a better solution in actual_solution's neigborhood
     # => actual_solution is a local optimum for that neighborhood

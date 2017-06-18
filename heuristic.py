@@ -79,7 +79,7 @@ class GreedyHeuristic(object):
                 self.handle_max_time_exceeded(self._temp_route)
                 return
             else:
-                IO.Log.debug(f'Successful insert; node {dest}')
+                IO.Log.debug(f'Successfully inserted node {dest}')
                 try:
                     self._customer.remove(dest)
                 except ValueError as e:
@@ -241,50 +241,45 @@ def metaheuristic(initial_solution, max_iter=10**3):
 
        (a first improving approach is used in neighborhood exploration)
 
-       Return the best solution found after max_iter or max_time seconds.
+       Return the best solution found after max_iter or maximum time exceeded.
     """
-    max_time = utility.CLI.args().max_time
     actual_solution = copy.deepcopy(initial_solution)
     vns_it = 0
     best_it = 0
     t0 = time.time()
-    explored_solutions = 0
+    num_explored_solutions = 0
     for vns_it in range(max_iter):
         # exit if time exceeded
-        if time.time() > t0 + max_time:
-            t_tot = time.time() - t0
-            IO.Log.info('VNS summary:')
-            IO.Log.info(f'{vns_it:>8}     iterations')
-            IO.Log.info(f'{t_tot:>12.3f} seconds')
-            IO.Log.info(f'{explored_solutions:>8}     explored sol.')
-            return actual_solution
+        if time.time() > t0 + utility.CLI.args().max_time:
+            break
 
         # explore each available neighborhood
         for neighborhood_generator in neighborhoods.values():
-            # explore each solutions in the neighborhood
+            # explore each solution in the neighborhood
             sol = local_search(actual_solution, neighborhood_generator)
             if sol[0] is not None:
+                # local search found a better solution in the neighborhood
                 actual_solution = sol[0]
                 best_it = vns_it
-            explored_solutions += sol[1]
+            num_explored_solutions += sol[1]
         if vns_it >= best_it + 3:
-            IO.Log.debug(f'{vns_it - best_it} empty iteration')
             break
 
     t_tot = time.time() - t0
     IO.Log.info('VNS summary:')
     IO.Log.info(f'{vns_it:>8}     iterations')
+    IO.Log.debug(f'({vns_it - best_it - 1:>7}     empty iterations)')
     IO.Log.info(f'{t_tot:>12.3f} seconds')
-    IO.Log.info(f'{explored_solutions:>8}     explored sol.')
+    IO.Log.info(f'{num_explored_solutions:>8}     explored sol.')
     return actual_solution
 
 
 def local_search(actual_solution, neighborhood):
     """Look in the neighborhood of actual_solution for better neighbors."""
-    explored_solutions = 0
+    num_explored_solutions = 0
     for neighbor in neighborhood(actual_solution):
-        explored_solutions += 1
-        # break on the first improving one
+        num_explored_solutions += 1
+        # return the first improving one
         if (neighbor.time < actual_solution.time
            or (neighbor.time == actual_solution.time and
                neighbor.energy < actual_solution.energy)):
@@ -293,5 +288,7 @@ def local_search(actual_solution, neighborhood):
             IO.Log.info(f'VNS found a better solution '
                         f'({delta_time:>+10.6f} m, '
                         f'{delta_energy:>+10.1f} J)')
-            return copy.deepcopy(neighbor), explored_solutions
-    return None, explored_solutions
+            return copy.deepcopy(neighbor), num_explored_solutions
+    # Could not find a better solution in actual_solution's neigborhood
+    # => actual_solution is a local optimum for that neighborhood
+    return None, num_explored_solutions

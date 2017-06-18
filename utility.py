@@ -92,6 +92,12 @@ class CLI(object):
                 description=CLI._description,
                 epilog=CLI._epilog)
             group = parser.add_mutually_exclusive_group()
+            parser.add_argument('-3', '--3-opt',
+                                action='store_true',
+                                dest='use_3_opt_neighborhood',
+                                help='include 3-opt neighborhood in VNS '
+                                'metaheuristic (can lead to greater '
+                                'computation time, default=False)')
             parser.add_argument('-a', '--altitude',
                                 default='ASTGTM2_de',
                                 dest='altitude',

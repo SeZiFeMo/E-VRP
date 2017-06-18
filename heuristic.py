@@ -168,7 +168,7 @@ def two_opt_neighbors(sol):
                     yield mod_sol
 
 
-def three_opt_neighbors(sol):
+def three_opt_neighbors(sol, _d={}):
     """Generator which produces a series of solutions close to the given one.
 
        (close in neighborhood sense)
@@ -195,6 +195,11 @@ def three_opt_neighbors(sol):
                     current positions will be skipped because they are already
                     explored by the visit of the 2-opt neighborhood!
     """
+    if not utility.CLI.args().use_3_opt_neighborhood:
+        if 'written_once' not in _d:
+            IO.Log.debug('To explore 3-opt neighborhood use -3 CLI argument.')
+            _d['written_once'] = True
+        return iter(list())
     mod_sol = copy.deepcopy(sol)
     for route in mod_sol.routes:
         for i in utility.shuffled_range(len(route._paths) - 2):

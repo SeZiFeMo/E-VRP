@@ -236,7 +236,7 @@ neighborhoods = {'2-opt': two_opt_neighbors,
                  'move': move_neighbors}
 
 
-def metaheuristic(initial_solution, max_iter=1000):
+def metaheuristic(initial_solution, max_iter=10**3):
     """Look (in different initial solution neighborhoods) for better solutions.
 
        (a first improving approach is used in neighborhood exploration)
@@ -248,7 +248,7 @@ def metaheuristic(initial_solution, max_iter=1000):
     vns_it = 0
     best_it = 0
     t0 = time.time()
-    explored_solutions = None
+    explored_solutions = 0
     for vns_it in range(max_iter):
         # exit if time exceeded
         if time.time() > t0 + max_time:
@@ -260,12 +260,13 @@ def metaheuristic(initial_solution, max_iter=1000):
             return actual_solution
 
         # explore each available neighborhood
-        for k, neighbor_generator in neighborhoods.items():
+        for neighborhood_generator in neighborhoods.values():
             # explore each solutions in the neighborhood
-            sol = local_search(actual_solution, neighbor_generator)
-            if sol is not None:
-                actual_solution, explored_solutions = sol
-            best_it = vns_it
+            sol = local_search(actual_solution, neighborhood_generator)
+            if sol[0] is not None:
+                actual_solution = sol[0]
+                best_it = vns_it
+            explored_solutions += sol[1]
         if vns_it >= best_it + 3:
             IO.Log.debug(f'{vns_it - best_it} empty iteration')
             break
@@ -277,7 +278,9 @@ def metaheuristic(initial_solution, max_iter=1000):
     IO.Log.info(f'{explored_solutions:>8}     explored sol.')
     return actual_solution
 
+
 def local_search(actual_solution, neighborhood):
+    """Look in the neighborhood of actual_solution for better neighbors."""
     explored_solutions = 0
     for neighbor in neighborhood(actual_solution):
         explored_solutions += 1
@@ -291,4 +294,4 @@ def local_search(actual_solution, neighborhood):
                         f'({delta_time:>+10.6f} m, '
                         f'{delta_energy:>+10.1f} J)')
             return copy.deepcopy(neighbor), explored_solutions
-    return None
+    return None, explored_solutions

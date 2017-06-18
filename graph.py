@@ -554,11 +554,15 @@ def main():
     # create a greedy heuristic solution
     heur = heuristic.GreedyHeuristic(abstract_g, cache)
     initial_sol = heur.create_feasible_solution()
+    IO.Log.debug('Greedy solution {} feasible'.format(
+                 'is' if initial_sol.is_feasible() else 'not'))
     IO.Log.info('Greedy solution cost        '
                 f'  {initial_sol.time:>9.6f} m, {initial_sol.energy:>10.1f} J')
 
     # find better solutions with metaheuristic
     meta_sol = heuristic.metaheuristic(initial_sol, max_iter=10**6)
+    IO.Log.debug('Metaheuristic solution {} feasible'.format(
+                 'is' if meta_sol.is_feasible() else 'is not'))
     IO.Log.info('Metaheuristic solution cost '
                 f'  {meta_sol.time:>9.6f} m, {meta_sol.energy:>10.1f} J')
     IO.Log.info('Total gain:                 '

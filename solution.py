@@ -330,7 +330,9 @@ class Route(object):
             try:
                 path = self.default_path(src, dest)
                 b_test.charge -= path.energy
-            except UnfeasibleRouteException:
+            except UnfeasibleRouteException as e:
+                IO.Log.debug('Caught UnfeasibleRouteException in '
+                             f'route.is_feasible() ({str(e)})')
                 return False
 
             time_test += path.time
@@ -340,13 +342,21 @@ class Route(object):
             if abs(e_sum) > 0 and dest[2] == 'station':
                 try:
                     time_test += b_test.recharge_until(batteries[i + 1].charge)
-                except UnfeasibleRouteException:
+                except UnfeasibleRouteException as e:
+                    IO.Log.debug('Caught UnfeasibleRouteException in '
+                                 f'route.is_feasible() ({str(e)})')
                     return False
-            elif abs(e_sum) > 0:
-                return False  # Could not charge battery outside stations
+            elif abs(e_sum) > 0.001:
+                IO.Log.debug('Trying to charge battery of {abs(e_sum):.1} J '
+                             'in a node which is not a station (in '
+                             'route.is_feasible())')
+                return False
 
             if time_test > self.time_limit:
-                return False  # Time limit exceeded
+                IO.Log.debug('Time limit exceeded of '
+                             f'{self.time_limit - time_test} s in '
+                             'route.is_feasible()')
+                return False
         return True
 
     def visited_customers(self):

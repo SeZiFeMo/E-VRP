@@ -78,6 +78,10 @@ class GreedyHeuristic(object):
                                ' exceed the maximum time')
                 self.handle_max_time_exceeded(self._temp_route)
                 return
+            except solution.UnfeasibleRouteException as e:
+                IO.Log.debug('Caught UnfeasibleRouteException in '
+                             'GreedyHeuristic.create_feasible_route() '
+                             f'({str(e)})')
             else:
                 IO.Log.debug(f'Successfully inserted node {dest}')
                 try:

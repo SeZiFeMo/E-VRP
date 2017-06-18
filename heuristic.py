@@ -194,14 +194,19 @@ def move_neighbors(sol):
     """Generator which produces a move neighborhood of the given solution."""
     mod_sol = copy.deepcopy(sol)
     for route in mod_sol.routes:
-        for i in range(len(route._paths) - 2):
-            node_i = copy.deepcopy(route._paths[i].last_node())
-            for j in range(len(route._paths) - 2):
+        for i in range(len(route._paths) - 1):
+            node_i = route._paths[i].last_node()
+            for j in range(i + 1, len(route._paths)):
                 try:
-                    route.remove(node_i)
-                    route.insert(node_i, j)
+                    route.remove(node_i)  # a remove shifts indexes left by one
+                    route.insert(node_i, j - 1)
+
+                    # but a simple swap would achieve the same result !!
+                    # (and in a more efficient way)
+                    # route.swap(node_i, route._paths[j].last_node()
                 except solution.UnfeasibleRouteException as e:
-                    IO.Log.debug(f'Move ({i},{j}) is not feasible')
+                    IO.Log.debug(f'Move of node {i} ({node_i}) to position '
+                                 f'{j} is not feasible ({str(e)})')
                     continue
                 else:
                     yield mod_sol

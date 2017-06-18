@@ -568,8 +568,10 @@ def main():
                 f'{initial_sol.energy - meta_sol.energy:>+10.1f} J)')
 
     if utility.CLI.args().csv_solution:
+        initial_sol.create_csv('heuristic')
+        IO.Log.info('Exported initial solution to heuristic.csv')
         meta_sol.create_csv('metaheuristic')
-        IO.Log.info('Exported solution to metaheuristic.csv')
+        IO.Log.info('Exported best solution to metaheuristic.csv')
     else:
         IO.Log.info('To export solution to csv file use -c CLI argument.')
 

@@ -551,30 +551,11 @@ def main():
     cache = CachePaths(abstract_g)
     IO.Log.debug('Created cache over abstract graph')
 
-    # print all paths starting from depot
-#    for coor, data in abstract_g.nodes_iter(data=True):
-#        src_node = *coor, data['type']
-#        if src_node[2] == 'depot':
-#            # iterate over path starting from depot
-#            for dest_node, green, short in cache.source_iterator(src_node):
-#                print(f'shortest path: (length: {short.length}, '
-#                      f'energy: {short.energy}, time: {short.time})')
-#                for it in short:
-#                    print('\tlat: {:2.7f}, lon: {:2.7f}, type: {}'.format(*it))
-#
-#                print(f'greenest path: (length: {green.length}, '
-#                      f'energy: {green.energy}, time: {green.time})')
-#                for it in green:
-#                    print('\tlat: {:2.7f}, lon: {:2.7f}, type: {}'.format(*it))
-#                print('#' * 80)
-
     # create a greedy heuristic solution
     heur = heuristic.GreedyHeuristic(abstract_g, cache)
     initial_sol = heur.create_feasible_solution()
     IO.Log.info('Greedy solution cost        '
                 f'  {initial_sol.time:>9.6f} m, {initial_sol.energy:>10.1f} J')
-    DrawSVG('heuristic', initial_sol).save()
-    IO.Log.info('Created heuristic.svg')
 
     # find better solutions with metaheuristic
     meta_sol = heuristic.metaheuristic(initial_sol, max_iter=10**6)
@@ -583,9 +564,13 @@ def main():
     IO.Log.info('Total gain:                 '
                 f'({initial_sol.time - meta_sol.time:>+10.6f} m, '
                 f'{initial_sol.energy - meta_sol.energy:>+10.1f} J)')
+
+    DrawSVG('heuristic', initial_sol).save()
+    IO.Log.info('Created heuristic.svg')
     DrawSVG('metaheuristic', meta_sol).save()
     IO.Log.info('Created metaheuristic.svg')
 
+
 # ----------------------------------- MAIN ---------------------------------- #
 if __name__ == '__main__':
-    cProfile.run('main()',filename='deterministic_10min')
+    cProfile.run('main()', filename='deterministic_10min')

@@ -281,8 +281,8 @@ def local_search(actual_solution, neighborhood):
         num_explored_solutions += 1
         # return the first improving one
         if (neighbor.time < actual_solution.time
-           or (neighbor.time == actual_solution.time and
-               neighbor.energy < actual_solution.energy)):
+            or (neighbor.time == actual_solution.time and
+                neighbor.energy < actual_solution.energy)):
             delta_energy = neighbor.energy - actual_solution.energy
             delta_time = neighbor.time - actual_solution.time
             IO.Log.info(f'VNS found a better solution '

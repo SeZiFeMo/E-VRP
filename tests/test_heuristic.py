@@ -121,6 +121,7 @@ class test_greedy_heuristic(unittest.TestCase):
         self.heuristic._temp_route.append((47, 15, 'customer'))
         self.heuristic.handle_insufficient_energy()
 
+
 class test_greedy_metaheuristic(unittest.TestCase):
 
     depot = {'lat': 48, 'lon': 16, 'alt': 0, 'type': 'depot'}

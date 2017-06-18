@@ -57,6 +57,7 @@ class GreedyHeuristic(object):
         while len(self._customer) > 0:
             self.create_feasible_route()
             sol.routes.append(self._temp_route)
+            self._temp_route = solution.Route(self._cache, greenest=True)
         return sol
 
     def create_feasible_route(self):
@@ -72,11 +73,11 @@ class GreedyHeuristic(object):
             except solution.BatteryCriticalException:
                 IO.Log.warning(f'Inserting node {dest} makes'
                                ' the battery below critical threshold')
-                self.handle_insufficient_energy(self._temp_route)
+                self.handle_insufficient_energy()
             except solution.MaximumTimeException:
                 IO.Log.warning(f'Inserting node {dest} makes self._temp_route'
                                ' exceed the maximum time')
-                self.handle_max_time_exceeded(self._temp_route)
+                self.handle_max_time_exceeded()
                 return
             except solution.UnfeasibleRouteException as e:
                 IO.Log.debug('Caught UnfeasibleRouteException in '
@@ -105,7 +106,7 @@ class GreedyHeuristic(object):
                                  'short for this problem!')
             else:
                 self._temp_route.remove(last)
-            self.handle_max_time_exceeded(self._temp_route)
+            self.handle_max_time_exceeded()
 
     def handle_insufficient_energy(self):
         dest = self.find_nearest(self._temp_route.last_node(), 'station')
@@ -121,7 +122,10 @@ class GreedyHeuristic(object):
                                  'for this problem!')
             else:
                 self._temp_route.remove(last)
-            self.handle_insufficient_energy(self._temp_route)
+            self.handle_insufficient_energy()
+        else:
+            IO.Log.debug(f'Recharging battery in station {dest}')
+            self._temp_route.last_battery().recharge()
 
     def find_nearest(self, current_node, type_to_find):
         min_time = math.inf
@@ -155,8 +159,12 @@ def two_opt_neighbors(sol):
     mod_sol = copy.deepcopy(sol)
     for route in mod_sol.routes:
         for i in utility.shuffled_range(len(route._paths) - 1):
+            if i >= len(route._paths):  # should never happen
+                continue
             node_i = route._paths[i].last_node()        # node C of the example
             for j in utility.shuffled_range(i + 1, len(route._paths)):
+                if j >= len(route._paths):  # should never happen
+                    continue
                 node_j = route._paths[j].last_node()    # node B of the example
                 try:
                     route.swap(node_i, node_j)
@@ -166,6 +174,8 @@ def two_opt_neighbors(sol):
                     continue
                 else:
                     yield mod_sol
+                finally:
+                    mod_sol = copy.deepcopy(sol)
 
 
 def three_opt_neighbors(sol, _d={}):
@@ -203,10 +213,16 @@ def three_opt_neighbors(sol, _d={}):
     mod_sol = copy.deepcopy(sol)
     for route in mod_sol.routes:
         for i in utility.shuffled_range(len(route._paths) - 2):
+            if i >= len(route._paths):  # should never happen
+                continue
             node_i = route._paths[i].last_node()
             for j in utility.shuffled_range(i + 1, len(route._paths) - 1):
+                if j >= len(route._paths):  # should never happen
+                    continue
                 node_j = route._paths[j].last_node()
                 for k in utility.shuffled_range(j + 1, len(route._paths)):
+                    if k >= len(route._paths):  # should never happen
+                        continue
                     node_k = route._paths[k].last_node()
                     route_bkp = copy.deepcopy(route)        # i - j - k
                     try:
@@ -217,6 +233,7 @@ def three_opt_neighbors(sol, _d={}):
                                      f'UnfeasibleRouteException: {str(e)}')
                     else:
                         yield mod_sol
+                    mod_sol = copy.deepcopy(sol)
                     route = copy.deepcopy(route_bkp)        # i - j - k
                     try:
                         route.swap(node_i, node_k)          # k - j - i
@@ -226,6 +243,7 @@ def three_opt_neighbors(sol, _d={}):
                                      f'UnfeasibleRouteException: {str(e)}')
                     else:
                         yield mod_sol
+                    mod_sol = copy.deepcopy(sol)
 
 
 def move_neighbors(sol):
@@ -233,6 +251,8 @@ def move_neighbors(sol):
     mod_sol = copy.deepcopy(sol)
     for route in mod_sol.routes:
         for i in utility.shuffled_range(len(route._paths) - 1):
+            if i >= len(route._paths):  # should never happen
+                continue
             node_i = route._paths[i].last_node()
             for j in utility.shuffled_range(i + 1, len(route._paths)):
                 try:
@@ -244,6 +264,8 @@ def move_neighbors(sol):
                     continue
                 else:
                     yield mod_sol
+                finally:
+                    mod_sol = copy.deepcopy(sol)
 
 
 def swap_neighbors(sol):
@@ -254,8 +276,12 @@ def swap_neighbors(sol):
         for b in utility.shuffled_range(a + 1, len(mod_sol.routes)):
             route_b = mod_sol.routes[b]
             for i in utility.shuffled_range(len(route_a._paths)):
+                if i >= len(route_a._paths):  # should never happen
+                    continue
                 node_i = route_a._paths[i].last_node()
                 for j in utility.shuffled_range(len(route_b._paths)):
+                    if j >= len(route_b._paths):  # should never happen
+                        continue
                     node_j = route_b._paths[j].last_node()
                     try:
                         route_a.remove(node_i)
@@ -270,6 +296,8 @@ def swap_neighbors(sol):
                         continue
                     else:
                         yield mod_sol
+                    finally:
+                        mod_sol = copy.deepcopy(sol)
 
 
 neighborhoods = {'2-opt': two_opt_neighbors,

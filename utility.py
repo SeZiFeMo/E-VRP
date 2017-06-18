@@ -134,10 +134,10 @@ class CLI(object):
                                 metavar='file.yaml',
                                 type=str)
             parser.add_argument('-t', '--time',
-                                default=60,
+                                default=300,
                                 dest='max_time',
                                 help='VNS time limit (maximum seconds of '
-                                'computation (default=60)',
+                                'computation (default=300)',
                                 metavar='sec',
                                 type=int)
             group.add_argument('-q', '--quiet',

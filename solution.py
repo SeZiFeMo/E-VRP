@@ -31,6 +31,7 @@ __license__ = "GPL3"
 # ------------------------------ SCRIPT LOADED ------------------------------ #
 
 import copy
+import csv
 import networkx as nx
 
 import IO
@@ -49,8 +50,8 @@ class Solution(object):
 
     def is_feasible(self):
         """Return if all routes are feasibile."""
-        return all([route.is_feasible() for route in self.routes]) \
-               and not self.missing_customers()
+        return bool(all([route.is_feasible() for route in self.routes])
+                    and len(self.missing_customers()) == 0)
 
     @property
     def energy(self):
@@ -58,7 +59,7 @@ class Solution(object):
 
     @property
     def time(self):
-        return sum([route.time for route in self.routes])
+        return max([route.time for route in self.routes])
 
     def missing_customers(self):
         """Return set of missing customers."""
@@ -66,6 +67,56 @@ class Solution(object):
         for route in self.routes:
             customers_left.difference_update(route.visited_customers())
         return customers_left
+
+    def create_csv(self, filename):
+        """Export solution to csv file."""
+        if not filename.endswith('.csv'):
+            filename = filename + '.csv'
+
+        no_kind = 'crossroad'
+
+        with open(filename, 'w') as f:
+            id_route = 'Route id'
+            lat, lon, kind = 'Latitude', 'Longitude', 'Node type'
+            charge_time = 'Charge time (minutes)'
+            header = [id_route, lat, lon, kind, charge_time]
+            csv_file = csv.DictWriter(f, fieldnames=header, dialect='excel')
+            csv_file.writeheader()
+
+            for idx, route in enumerate(self.routes):
+                prev_batt = Battery()
+                for index, path in enumerate(route._paths):
+                    if index == 0:
+                        node = path.first_node()
+                        row = {id_route: idx, lat: node[0], lon: node[1],
+                               kind: node[2] if node[2] else no_kind,
+                               charge_time: 0.0}
+                        csv_file.writerow(row)
+
+                    for node in path._nodes[1:-1]:
+                        row = {id_route: idx, lat: node[0], lon: node[1],
+                               kind: node[2] if node[2] else no_kind,
+                               charge_time: 0.0}
+                        csv_file.writerow(row)
+
+                    last_node = path.last_node()
+                    last_batt = route._batteries[index]
+                    row = {id_route: idx, lat: last_node[0], lon: last_node[1],
+                           kind: last_node[2] if last_node[2] else no_kind,
+                           charge_time: 0.0}
+                    if last_node[2] == 'station':
+                        # check if battery was charged in that station
+                        energy = prev_batt.charge
+                        energy -= path.energy
+                        if last_batt.charge > energy:
+                            minutes = last_batt.time_elapsed(energy,
+                                                             last_batt.charge)
+                            row[charge_time] = minutes
+                    csv_file.writerow(row)
+                    prev_batt = copy.deepcopy(last_batt)
+
+                # add an empty line between routes
+                csv_file.writerow({k: '' for k in header})
 
 
 class Route(object):
@@ -524,7 +575,7 @@ class Battery(object):
     def charge(self, new_energy):
         """Raises BatteryCriticalException if under threshold."""
         if new_energy <= self._critical * self._total_energy:
-            raise BatteryCriticalException()
+            raise BatteryCriticalException('Battery critical')
         self._charge = min(self._total_energy, new_energy)
 
     def recharge_until(self, asked_energy):
@@ -535,7 +586,9 @@ class Battery(object):
         if asked_energy <= 0:
             return 0
         elif asked_energy > (1 - self._critical) * self._total_energy + 1e4:
-            raise InsufficientBatteryException()
+            raise InsufficientBatteryException('Battery capacity is not '
+                                               'enough to satisfy requested '
+                                               'amount of energy')
         self.charge += asked_energy
         return asked_energy / self._charge_rate
 
@@ -561,7 +614,7 @@ class Battery(object):
                 raise ValueError('Energy argument out of battery bounds')
 
         if energy_1 >= energy_2:
-            return 0
+            return 0.0
         else:
             return (energy_2 - energy_1) / self._charge_rate
 

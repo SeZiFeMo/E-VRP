@@ -43,30 +43,25 @@ class GreedyHeuristic(object):
         self._abstract_g = abstract_g
         self._cache = cache
         self._depot = abstract_g.depot
-        self._temp_route = solution.Route(self._cache, greenest=True)
-        self._customer = [(*coor, data['type'])
-                          for coor, data in abstract_g.nodes_iter(data=True)
-                          if data['type'] == 'customer']
-
         assert self._depot is not None, 'Could not find depot in graph'
 
     def create_feasible_solution(self):
         """Build a feasible, greedy solution for the problem."""
         sol = solution.Solution(self._abstract_g, self._cache)
         # While customers are not all served:
-        while self._customer:
+        while sol.missing_customers():
+            self._customer = list(sol.missing_customers())
+            self._temp_route = solution.Route(self._cache, greenest=True)
             self.create_feasible_route()
             sol.routes.append(self._temp_route)
-            self._temp_route = solution.Route(self._cache, greenest=True)
-        assert not sol.missing_customers(), 'self._customer is empty ' \
-                                            'even if sol.missing_customers() '\
-                                            'is not'
+        assert not sol.missing_customers(), 'self._customer is empty even ' \
+                                            'if sol.missing_customers() is not'
         return sol
 
     def create_feasible_route(self):
         current_node = self._depot
         while True:
-            if len(self._customer) == 0:
+            if not self._customer:
                 # We have visited all customers: add depot
                 dest = self._depot
             else:
@@ -88,14 +83,11 @@ class GreedyHeuristic(object):
                              f'({str(e)})')
             else:
                 IO.Log.debug(f'Successfully inserted node {dest}')
-                try:
+                if dest == self._depot:
+                    return
+                else:
                     self._customer.remove(dest)
-                except ValueError as e:
-                    if dest == self._depot and len(self._customer) == 0:
-                        return
-                    else:
-                        raise e
-                current_node = dest
+                    current_node = dest
 
     def handle_max_time_exceeded(self):
         # TODO change greenest to shortest before attempting to return to depot
@@ -110,6 +102,8 @@ class GreedyHeuristic(object):
             else:
                 self._temp_route.remove(last)
             self.handle_max_time_exceeded()
+        else:
+            IO.Log.debug(f'Successfully inserted node {self._depot}')
 
     def handle_insufficient_energy(self):
         dest = self.find_nearest(self._temp_route.last_node(), 'station')
@@ -127,6 +121,7 @@ class GreedyHeuristic(object):
                 self._temp_route.remove(last)
             self.handle_insufficient_energy()
         else:
+            IO.Log.debug(f'Successfully inserted node {dest}')
             IO.Log.debug(f'Recharging battery in station {dest}')
             self._temp_route.last_battery().recharge()
 

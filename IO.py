@@ -98,7 +98,7 @@ def export_problem_to_directory(exit_on_success=False):
                          problem['depot'][0]['latitude']))
     nx.write_shp(temp_graph, os.path.join(export_dir, 'depot.shp'))
 
-    for node_type in ('customers', 'stations'):
+    for node_type in ('customer', 'station'):
         temp_graph = nx.DiGraph()
         for node in problem[node_type]:
             temp_graph.add_node((node['longitude'], node['latitude']))

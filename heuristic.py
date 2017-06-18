@@ -143,40 +143,25 @@ def two_opt_neighbors(sol):
 
        note: https://docs.python.org/3/glossary.html#term-generator
              https://en.wikipedia.org/wiki/2-opt
-              ~> A   C              ~> A - C
-                   X ↑    becomes          ↓
-              <~ D   B              <~ D - B
-              (A, B, C, D)          (A, C, B, D)
+              ~> A   C - ...                ~> A - C - ...
+                   X        )    becomes                  )
+              <~ D   B - ...                <~ D - B - ...
+              (A, B, ... C, D)              (A, C, ..., B, D)
     """
-    my_sol = copy.deepcopy(sol)
-    for route in my_sol.routes:
-        i = 0
-        while i < len(route._paths) - 2:                          # example:
-            node_i = route._paths[i].last_node()                  # B
-            node_j = route._paths[i + 1].last_node()              # C
-            tail = [p.last_node() for p in route._paths[i + 2:]]  # D
-            # remove B, C, D
-            for node in [node_i, node_j] + tail:
+    mod_sol = copy.deepcopy(sol)
+    for route in mod_sol.routes:
+        for i in range(len(route._paths) - 1):
+            node_i = route._paths[i].last_node()        # node C of the example
+            for j in range(i + 1, len(route._paths)):
+                node_j = route._paths[j].last_node()    # node B of the example
                 try:
-                    route.remove(node)
+                    route.swap(node_i, node_j)
                 except solution.UnfeasibleRouteException as e:
-                    IO.Log.debug('Unexpected UnfeasibleRouteException while '
-                                 'removing last node from a route! '
-                                 f'({str(e)})')
-                    break
-            else:
-                # append C, B, D
-                for node in [node_j, node_i] + tail:
-                    try:
-                        route.append(node)
-                    except solution.UnfeasibleRouteException as e:
-                        IO.Log.debug(f'Iteration {i} in two_opt_neighbors() '
-                                     'generator got UnfeasibleRouteException: '
-                                     f'{str(e)}')
-                        break
+                    IO.Log.debug(f'two_opt_neighbors() generator got '
+                                 f'UnfeasibleRouteException: {str(e)}')
+                    continue
                 else:
-                    yield my_sol
-            i += 1
+                    yield mod_sol
 
 
 def three_opt_neighbors(sol):
@@ -186,8 +171,52 @@ def three_opt_neighbors(sol):
 
        note: https://docs.python.org/3/glossary.html#term-generator
              https://en.wikipedia.org/wiki/3-opt
+
+       explanation: the three edge are selected by choosing 3 different nodes
+                    (each edge will be the one arriving to that node);
+                    to try all the possible reconnections of the three selected
+                    edges we need to understand which are the possible
+                    permutations of them:
+        >>> import itertools
+        >>> for i, j, k in itertools.permutations('ijk'):
+        >>>     print(f'{i}\t{j}\t{k}')
+           i    j    k          # actual arrangement (will be skipped)
+           i    k    j          # 'i' is in the same position
+           j    i    k          # 'k' is in the same position
+           j    k    i          # that solution must be explored with 3-opt
+           k    i    j          # that solution must be explored with 3-opt
+           k    j    i          # 'j' is in the same position
+
+                    In practise the arrangements which keep i, j, and k in the
+                    current positions will be skipped because they are already
+                    explored by the visit of the 2-opt neighborhood!
     """
-    return iter([])
+    mod_sol = copy.deepcopy(sol)
+    for route in mod_sol.routes:
+        for i in range(len(route._paths) - 2):
+            node_i = route._paths[i].last_node()
+            for j in range(i + 1, len(route._paths) - 1):
+                node_j = route._paths[j].last_node()
+                for k in range(j + 1, len(route._paths)):
+                    node_k = route._paths[k].last_node()
+                    route_bkp = copy.deepcopy(route)        # i - j - k
+                    try:
+                        route.swap(node_i, node_j)          # j - i - k
+                        route.swap(node_i, node_k)          # j - k - i
+                    except solution.UnfeasibleRouteException as e:
+                        IO.Log.debug(f'three_opt_neighbors() generator got '
+                                     f'UnfeasibleRouteException: {str(e)}')
+                    else:
+                        yield mod_sol
+                    route = copy.deepcopy(route_bkp)        # i - j - k
+                    try:
+                        route.swap(node_i, node_k)          # k - j - i
+                        route.swap(node_j, node_i)          # k - i - j
+                    except solution.UnfeasibleRouteException as e:
+                        IO.Log.debug(f'three_opt_neighbors() generator got '
+                                     f'UnfeasibleRouteException: {str(e)}')
+                    else:
+                        yield mod_sol
 
 
 def move_neighbors(sol):
@@ -200,10 +229,6 @@ def move_neighbors(sol):
                 try:
                     route.remove(node_i)  # a remove shifts indexes left by one
                     route.insert(node_i, j - 1)
-
-                    # but a simple swap would achieve the same result !!
-                    # (and in a more efficient way)
-                    # route.swap(node_i, route._paths[j].last_node()
                 except solution.UnfeasibleRouteException as e:
                     IO.Log.debug(f'Move of node {i} ({node_i}) to position '
                                  f'{j} is not feasible ({str(e)})')
@@ -215,23 +240,31 @@ def move_neighbors(sol):
 def swap_neighbors(sol):
     """Generator which produces a swap neighborhood of the given solution."""
     mod_sol = copy.deepcopy(sol)
-    for route in mod_sol.routes:
-        for i in range(len(route._paths) - 1):
-            node_i = route._paths[i].last_node()
-            for j in range(i + 1, len(route._paths)):
-                node_j = route._paths[j].last_node()
-                try:
-                    route.swap(node_i, node_j)
-                except solution.UnfeasibleRouteException as e:
-                    IO.Log.debug(f'Swap between node {i} ({node_i}) and '
-                                 f'node {j} ({node_j}) is not feasible '
-                                 f'({str(e)})')
-                    continue
-                else:
-                    yield mod_sol
+    for a in range(len(mod_sol.routes) - 1):
+        route_a = mod_sol.routes[a]
+        for b in range(a + 1, len(mod_sol.routes)):
+            route_b = mod_sol.routes[b]
+            for i in range(len(route_a._paths)):
+                node_i = route_a._paths[i].last_node()
+                for j in range(len(route_b._paths)):
+                    node_j = route_b._paths[j].last_node()
+                    try:
+                        route_a.remove(node_i)
+                        route_b.remove(node_j)
+
+                        route_a.insert(node_j, i)
+                        route_a.insert(node_i, j)
+                    except solution.UnfeasibleRouteException as e:
+                        IO.Log.debug(f'Swap between node {i} ({node_i}) of '
+                                     f'route {a} and node {j} ({node_j}) of '
+                                     f'route {b} is not feasible ({str(e)})')
+                        continue
+                    else:
+                        yield mod_sol
 
 
 neighborhoods = {'2-opt': two_opt_neighbors,
+                 '3-opt': three_opt_neighbors,
                  'swap': swap_neighbors,
                  'move': move_neighbors}
 

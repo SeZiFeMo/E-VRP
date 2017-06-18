@@ -39,9 +39,7 @@ for lib in ('graphviz', 'matplotlib.pyplot as plt', 'networkx as nx', 'yaml'):
 
 import graphviz
 import math
-import matplotlib.pyplot as plt
 import networkx as nx
-import warnings
 import cProfile
 
 import heuristic
@@ -569,10 +567,21 @@ def main():
                 f'({initial_sol.time - meta_sol.time:>+10.6f} m, '
                 f'{initial_sol.energy - meta_sol.energy:>+10.1f} J)')
 
-    DrawSVG('heuristic', initial_sol).save()
-    IO.Log.info('Created heuristic.svg')
-    DrawSVG('metaheuristic', meta_sol).save()
-    IO.Log.info('Created metaheuristic.svg')
+    if utility.CLI.args().csv_solution:
+        meta_sol.create_csv('metaheuristic')
+        IO.Log.info('Exported solution to metaheuristic.csv')
+    else:
+        IO.Log.info('To export solution to csv file use -c CLI argument.')
+
+    if utility.CLI.args().draw_svg:
+        DrawSVG('heuristic', initial_sol).save()
+        IO.Log.info('Created heuristic.svg')
+        DrawSVG('metaheuristic', meta_sol).save()
+        IO.Log.info('Created metaheuristic.svg')
+    else:
+        IO.Log.info('To generate svg images of both heuristic and '
+                    'metaheuristic')
+        IO.Log.info('solutions use -d CLI argument.')
 
 
 # ----------------------------------- MAIN ---------------------------------- #

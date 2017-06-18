@@ -156,9 +156,9 @@ def two_opt_neighbors(sol):
     """
     mod_sol = copy.deepcopy(sol)
     for route in mod_sol.routes:
-        for i in range(len(route._paths) - 1):
+        for i in utility.shuffled_range(len(route._paths) - 1):
             node_i = route._paths[i].last_node()        # node C of the example
-            for j in range(i + 1, len(route._paths)):
+            for j in utility.shuffled_range(i + 1, len(route._paths)):
                 node_j = route._paths[j].last_node()    # node B of the example
                 try:
                     route.swap(node_i, node_j)
@@ -170,7 +170,7 @@ def two_opt_neighbors(sol):
                     yield mod_sol
 
 
-def three_opt_neighbors(sol):
+def three_opt_neighbors(sol, _d={}):
     """Generator which produces a series of solutions close to the given one.
 
        (close in neighborhood sense)
@@ -197,13 +197,18 @@ def three_opt_neighbors(sol):
                     current positions will be skipped because they are already
                     explored by the visit of the 2-opt neighborhood!
     """
+    if not utility.CLI.args().use_3_opt_neighborhood:
+        if 'written_once' not in _d:
+            IO.Log.debug('To explore 3-opt neighborhood use -3 CLI argument.')
+            _d['written_once'] = True
+        return iter(list())
     mod_sol = copy.deepcopy(sol)
     for route in mod_sol.routes:
-        for i in range(len(route._paths) - 2):
+        for i in utility.shuffled_range(len(route._paths) - 2):
             node_i = route._paths[i].last_node()
-            for j in range(i + 1, len(route._paths) - 1):
+            for j in utility.shuffled_range(i + 1, len(route._paths) - 1):
                 node_j = route._paths[j].last_node()
-                for k in range(j + 1, len(route._paths)):
+                for k in utility.shuffled_range(j + 1, len(route._paths)):
                     node_k = route._paths[k].last_node()
                     route_bkp = copy.deepcopy(route)        # i - j - k
                     try:
@@ -229,9 +234,9 @@ def move_neighbors(sol):
     """Generator which produces a move neighborhood of the given solution."""
     mod_sol = copy.deepcopy(sol)
     for route in mod_sol.routes:
-        for i in range(len(route._paths) - 1):
+        for i in utility.shuffled_range(len(route._paths) - 1):
             node_i = route._paths[i].last_node()
-            for j in range(i + 1, len(route._paths)):
+            for j in utility.shuffled_range(i + 1, len(route._paths)):
                 try:
                     route.remove(node_i)  # a remove shifts indexes left by one
                     route.insert(node_i, j - 1)
@@ -246,13 +251,13 @@ def move_neighbors(sol):
 def swap_neighbors(sol):
     """Generator which produces a swap neighborhood of the given solution."""
     mod_sol = copy.deepcopy(sol)
-    for a in range(len(mod_sol.routes) - 1):
+    for a in utility.shuffled_range(len(mod_sol.routes) - 1):
         route_a = mod_sol.routes[a]
-        for b in range(a + 1, len(mod_sol.routes)):
+        for b in utility.shuffled_range(a + 1, len(mod_sol.routes)):
             route_b = mod_sol.routes[b]
-            for i in range(len(route_a._paths)):
+            for i in utility.shuffled_range(len(route_a._paths)):
                 node_i = route_a._paths[i].last_node()
-                for j in range(len(route_b._paths)):
+                for j in utility.shuffled_range(len(route_b._paths)):
                     node_j = route_b._paths[j].last_node()
                     try:
                         route_a.remove(node_i)

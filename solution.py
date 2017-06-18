@@ -49,7 +49,8 @@ class Solution(object):
 
     def is_feasible(self):
         """Return if all routes are feasibile."""
-        return all([route.is_feasible() for route in self.routes])
+        return all([route.is_feasible() for route in self.routes]) \
+               and not self.missing_customers()
 
     @property
     def energy(self):
@@ -324,8 +325,8 @@ class Route(object):
 
         time_test = 0
         b_test = Battery()
-        for i, (*src, src_type) in enumerate(paths[:-1]):
-            *dest, dest_type = paths[i + 1]
+        for i, p in enumerate(paths[:-1]):
+            src, dest = p.last_node(), paths[i + 1].last_node()
             try:
                 path = self.default_path(src, dest)
                 b_test.charge -= path.energy
@@ -335,8 +336,8 @@ class Route(object):
             time_test += path.time
 
             # if energy sum is not zero a charge might have happened
-            e_sum = batteries[i + 1].charge - batteries[i].charg + path.energy
-            if abs(e_sum) > 0 and dest_type == 'station':
+            e_sum = batteries[i + 1].charge - batteries[i].charge + path.energy
+            if abs(e_sum) > 0 and dest[2] == 'station':
                 try:
                     time_test += b_test.recharge_until(batteries[i + 1].charge)
                 except UnfeasibleRouteException:

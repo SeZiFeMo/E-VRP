@@ -501,7 +501,7 @@ class DrawSVG(object):
                              color=self.resolve_color(color),
                              penwidth=penwidth, style=style)
 
-    def coordinates_to_position(self, lat, lon, ppi=72):
+    def coordinates_to_position(self, lat, lon, ppi=4.5):
         """Return position in points."""
         min_lat = min(lat for lat, lon in self.graph)
         max_lat = max(lat for lat, lon in self.graph)
@@ -516,7 +516,7 @@ class DrawSVG(object):
         else:
             x = (11.7 * ppi * lon) / delta_lon
             y = (11.7 * ppi * lat) / delta_lat
-        return str('%(x)f,%(y)f!' % {'x': x / 10, 'y': y / 10})  # why 10 ?
+        return str('%(x)f,%(y)f!' % {'x': x, 'y': y})
 
 
 def main():

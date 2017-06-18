@@ -96,19 +96,29 @@ class CLI(object):
                                 action='store_true',
                                 dest='use_3_opt_neighborhood',
                                 help='include 3-opt neighborhood in VNS '
-                                'metaheuristic (can lead to greater '
-                                'computation time, default=False)')
+                                'metaheuristic\n(can lead to greater '
+                                'computation time,\ndefault=False)')
             parser.add_argument('-a', '--altitude',
                                 default='ASTGTM2_de',
                                 dest='altitude',
                                 help='tag describing the elevation of nodes '
-                                     'in node.shp (default=ASTGTM2_de)',
+                                     'in node.shp\n(default=ASTGTM2_de)',
                                 metavar='tag',
                                 type=str)
+            parser.add_argument('-c', '--csv-solution',
+                                action='store_true',
+                                dest='csv_solution',
+                                help='create csv file with solution '
+                                '(default=False)')
+            parser.add_argument('-d', '--draw-svg',
+                                action='store_true',
+                                dest='draw_svg',
+                                help='generate svg images of both heuristic '
+                                'and\nmetaheuristic solutions (default=False)')
             parser.add_argument('-e', '--export',
                                 dest='export_dir',
                                 help='export to directory a shapefile '
-                                     'representation of the problem to solve',
+                                     'representation\nof the problem to solve',
                                 metavar='dir',
                                 type=str)
             parser.add_argument('-i', '--import',
@@ -141,7 +151,7 @@ class CLI(object):
                                     '(default level is INFO)')
             parser.add_argument('-w', '--workspace',
                                 dest='workspace',
-                                help='directory with edges.shp and node.shp '
+                                help='directory with edges.shp and node.shp\n'
                                      '(with elevation information)',
                                 metavar='dir',
                                 type=str)

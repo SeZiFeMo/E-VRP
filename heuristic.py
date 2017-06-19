@@ -326,11 +326,12 @@ def metaheuristic(initial_solution, max_iter=10**3):
             # explore each solution in the neighborhood
             sol = shake(actual_solution, k)
             sol = local_search(sol, neighborhood_generator)
+            num_explored_solutions += sol[1]
             if sol[0] is not None:
                 # local search found a better solution in the neighborhood
                 actual_solution = sol[0]
                 best_it = vns_it
-            num_explored_solutions += sol[1]
+                break
         if vns_it >= best_it + 3:
             break
 

@@ -43,29 +43,32 @@ class GreedyHeuristic(object):
         self._abstract_g = abstract_g
         self._cache = cache
         self._depot = abstract_g.depot
+        self._solution = None
         assert self._depot is not None, 'Could not find depot in graph'
 
     def create_feasible_solution(self):
         """Build a feasible, greedy solution for the problem."""
-        sol = solution.Solution(self._abstract_g, self._cache)
+        self._solution = solution.Solution(self._abstract_g, self._cache)
         # While customers are not all served:
-        while sol.missing_customers():
-            self._customer = list(sol.missing_customers())
+        while self._solution.missing_customers():
+            self._customer = list(self._solution.missing_customers())
             self._temp_route = solution.Route(self._cache, greenest=True)
             self.create_feasible_route()
-            sol.routes.append(self._temp_route)
-        assert not sol.missing_customers(), 'self._customer is empty even ' \
-                                            'if sol.missing_customers() is not'
-        return sol
+            self._solution.routes.append(self._temp_route)
+        assert not self._solution.missing_customers(), 'self._customer is ' \
+                                                       'empty even if sol.' \
+                                                       'missing_customers(' \
+                                                       ') is not'
+        return self._solution
 
     def create_feasible_route(self):
         current_node = self._depot
         while True:
-            if not self._customer:
+            if not self._solution.missing_customers():
                 # We have visited all customers: add depot
                 dest = self._depot
             else:
-                dest = self.find_nearest(current_node, 'customer')
+                dest = find_nearest(self._solution, current_node, 'customer')
             try:
                 self._temp_route.append(dest)
             except solution.BatteryCriticalException:
@@ -86,7 +89,6 @@ class GreedyHeuristic(object):
                 if dest == self._depot:
                     return
                 else:
-                    self._customer.remove(dest)
                     current_node = dest
 
     def handle_max_time_exceeded(self):
@@ -105,7 +107,8 @@ class GreedyHeuristic(object):
             IO.Log.debug(f'Successfully inserted node {self._depot}')
 
     def handle_insufficient_energy(self):
-        dest = self.find_nearest(self._temp_route.last_node(), 'station')
+        dest = find_nearest(self._solution, self._temp_route.last_node(),
+                            'station')
         try:
             self._temp_route.append(dest)
         except solution.BatteryCriticalException:
@@ -122,23 +125,28 @@ class GreedyHeuristic(object):
         else:
             IO.Log.debug(f'Successfully inserted node {dest}')
             IO.Log.debug(f'Recharging battery in station {dest}')
+            IO.Log.debug('Old charge: '
+                         f'{self._temp_route.last_battery().charge}')
             self._temp_route.last_battery().recharge()
+            IO.Log.debug('New charge: '
+                         f'{self._temp_route.last_battery().charge}')
 
-    def find_nearest(self, current_node, type_to_find):
-        min_time = math.inf
-        min_node = None
-        for dest, green, short in self._cache.source_iterator(current_node):
-            if type_to_find == 'customer':
-                if dest[2] == type_to_find and \
-                   dest in self._customer and \
-                   green.time < min_time:
-                    min_time = green.time
-                    min_node = dest
-            else:
-                if dest[2] == type_to_find and green.time < min_time:
-                    min_time = green.time
-                    min_node = dest
-        return min_node
+
+def find_nearest(sol, current_node, type_to_find):
+    min_time = math.inf
+    min_node = None
+    for dest, green, short in sol._graph_cache.source_iterator(current_node):
+        if type_to_find == 'customer':
+            if dest[2] == type_to_find and \
+               dest in sol.missing_customers() and \
+               green.time < min_time:
+                min_time = green.time
+                min_node = dest
+        else:
+            if dest[2] == type_to_find and green.time < min_time:
+                min_time = green.time
+                min_node = dest
+    return min_node
 
 
 def two_opt_neighbors(sol):

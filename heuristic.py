@@ -69,12 +69,12 @@ class GreedyHeuristic(object):
             try:
                 self._temp_route.append(dest)
             except solution.BatteryCriticalException:
-                IO.Log.warning(f'Inserting node {dest} makes'
-                               ' the battery below critical threshold')
+                IO.Log.debug(f'Inserting node {dest} makes'
+                             ' the battery below critical threshold')
                 self.handle_insufficient_energy()
             except solution.MaximumTimeException:
-                IO.Log.warning(f'Inserting node {dest} makes self._temp_route'
-                               ' exceed the maximum time')
+                IO.Log.debug(f'Inserting node {dest} makes self._temp_route'
+                             ' exceed the maximum time')
                 self.handle_max_time_exceeded()
                 return
             except solution.UnfeasibleRouteException as e:
@@ -90,7 +90,6 @@ class GreedyHeuristic(object):
                     current_node = dest
 
     def handle_max_time_exceeded(self):
-        # TODO change greenest to shortest before attempting to return to depot
         try:
             self._temp_route.append(self._depot)
         except solution.MaximumTimeException:

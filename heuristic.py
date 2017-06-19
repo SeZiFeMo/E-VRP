@@ -51,18 +51,15 @@ class GreedyHeuristic(object):
         self._sol = solution.Solution(self._abstract_g, self._cache)
         # While customers are not all served:
         while self._sol.missing_customers():
-            self._customer = list(self._sol.missing_customers())
             self._temp_route = solution.Route(self._cache, greenest=True)
             self.create_feasible_route()
             self._sol.routes.append(self._temp_route)
-        assert not self._sol.missing_customers(), 'self._customer is empty even ' \
-                                            'if self._sol.missing_customers() is not'
         return self._sol
 
     def create_feasible_route(self):
         current_node = self._depot
         while True:
-            if not self._customer:
+            if not self._sol.missing_customers():
                 # We have visited all customers: add depot
                 dest = self._depot
             else:
@@ -87,7 +84,6 @@ class GreedyHeuristic(object):
                 if dest == self._depot:
                     return
                 else:
-                    self._customer.remove(dest)
                     current_node = dest
 
     def handle_max_time_exceeded(self):
@@ -133,7 +129,7 @@ class GreedyHeuristic(object):
         for dest, green, short in self._cache.source_iterator(current_node):
             if type_to_find == 'customer':
                 if dest[2] == type_to_find and \
-                   dest in self._customer and \
+                   dest in self._sol.missing_customers() and \
                    green.time < min_time:
                     min_time = green.time
                     min_node = dest

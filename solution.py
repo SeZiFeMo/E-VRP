@@ -66,6 +66,7 @@ class Solution(object):
         customers_left = set(self._graph.customers)
         for route in self.routes:
             customers_left.difference_update(route.visited_customers())
+        IO.Log.debug(f'Customers left: {customers_left}')
         return customers_left
 
     def create_csv(self, filename):

@@ -99,6 +99,7 @@ class GreedyHeuristic(object):
                 raise SystemExit(f'Max time {self._temp_route.time_limit} too '
                                  'short for this problem!')
             else:
+                IO.Log.debug(f'Remove node {last} due to max time exceeded')
                 self._temp_route.remove(last)
             self.handle_max_time_exceeded()
         else:
@@ -118,6 +119,7 @@ class GreedyHeuristic(object):
                                  'for this problem!')
             else:
                 self._temp_route.remove(last)
+                IO.Log.debug(f'Remove node {last} due to insufficient battery')
             self.handle_insufficient_energy()
         else:
             IO.Log.debug(f'Successfully inserted node {dest}')

@@ -43,20 +43,21 @@ class GreedyHeuristic(object):
         self._abstract_g = abstract_g
         self._cache = cache
         self._depot = abstract_g.depot
+        self._sol = None
         assert self._depot is not None, 'Could not find depot in graph'
 
     def create_feasible_solution(self):
         """Build a feasible, greedy solution for the problem."""
-        sol = solution.Solution(self._abstract_g, self._cache)
+        self._sol = solution.Solution(self._abstract_g, self._cache)
         # While customers are not all served:
-        while sol.missing_customers():
-            self._customer = list(sol.missing_customers())
+        while self._sol.missing_customers():
+            self._customer = list(self._sol.missing_customers())
             self._temp_route = solution.Route(self._cache, greenest=True)
             self.create_feasible_route()
-            sol.routes.append(self._temp_route)
-        assert not sol.missing_customers(), 'self._customer is empty even ' \
-                                            'if sol.missing_customers() is not'
-        return sol
+            self._sol.routes.append(self._temp_route)
+        assert not self._sol.missing_customers(), 'self._customer is empty even ' \
+                                            'if self._sol.missing_customers() is not'
+        return self._sol
 
     def create_feasible_route(self):
         current_node = self._depot

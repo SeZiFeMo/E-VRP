@@ -36,6 +36,7 @@ __license__ = "GPL3"
 if __name__ == '__main__':
     raise SystemExit('Please do not run that script, load it!')
 
+random.seed(999)
 
 def check_python_version():
     if sys.version_info < (3,):
@@ -61,7 +62,6 @@ def energy(rise, length, consumption, weight, **kwargs):
 def shuffled_range(*args):
     """Return iterator over a range shuffled randomly."""
     l = list(range(*args))
-    random.seed(999)
     random.shuffle(l, random.random)
     return iter(l)
 

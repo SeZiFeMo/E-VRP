@@ -120,8 +120,6 @@ class GreedyHeuristic(object):
             self.handle_insufficient_energy()
         else:
             IO.Log.debug(f'Successfully inserted node {dest}')
-            IO.Log.debug(f'Recharging battery in station {dest}')
-            self._temp_route.last_battery().recharge()
 
     def find_nearest(self, current_node, type_to_find):
         min_time = math.inf

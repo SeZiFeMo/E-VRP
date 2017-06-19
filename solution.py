@@ -175,6 +175,10 @@ class Route(object):
         self._paths.append(path)
         self._batteries.append(batt)
 
+        # if a station is reached recharge the battery
+        if dest_node[2] == 'station':
+            batt.recharge()
+
     def insert(self, node, pos):
         """Add to route the path to reach the given node in position pos.
 

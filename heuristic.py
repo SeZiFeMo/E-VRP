@@ -340,6 +340,7 @@ def metaheuristic(initial_solution, max_iter=10**3):
     IO.Log.info(f'{vns_it:>8}     iterations')
     IO.Log.debug(f'({vns_it - best_it - 1:>7}     empty iterations)')
     IO.Log.info(f'{t_tot:>12.3f} seconds')
+    IO.Log.info(f'{len(actual_solution.routes):7} vehicles used')
     IO.Log.info(f'{num_explored_solutions:>8}     explored sol.')
     return actual_solution
 

@@ -26,7 +26,6 @@
 
 import argparse
 import random
-random.seed(999)
 import sys
 
 __authors__ = "Serena Ziviani, Federico Motta"

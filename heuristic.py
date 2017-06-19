@@ -322,9 +322,10 @@ def metaheuristic(initial_solution, max_iter=10**3):
             break
 
         # explore each available neighborhood
-        for neighborhood_generator in neighborhoods.values():
+        for k, neighborhood_generator in enumerate(neighborhoods.values()):
             # explore each solution in the neighborhood
-            sol = local_search(actual_solution, neighborhood_generator)
+            sol = shake(actual_solution, k)
+            sol = local_search(sol, neighborhood_generator)
             if sol[0] is not None:
                 # local search found a better solution in the neighborhood
                 actual_solution = sol[0]
@@ -363,3 +364,12 @@ def local_search(actual_solution, neighborhood):
     # Could not find a better solution in actual_solution's neigborhood
     # => actual_solution is a local optimum for that neighborhood
     return None, num_explored_solutions
+
+def shake(sol, k):
+    """Make k random feasible swap moves on the given solution."""
+    for i in range(k):
+        try:
+            sol = swap_neighbors(sol).__next__()
+        except StopIteration:
+            IO.Log.debug(f'Stopped after {i} shake iterations')
+    return sol

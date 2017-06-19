@@ -26,6 +26,7 @@
 
 import argparse
 import random
+random.seed(999)
 import sys
 
 __authors__ = "Serena Ziviani, Federico Motta"
@@ -61,7 +62,6 @@ def energy(rise, length, consumption, weight, **kwargs):
 def shuffled_range(*args):
     """Return iterator over a range shuffled randomly."""
     l = list(range(*args))
-    random.seed(999)
     random.shuffle(l, random.random)
     return iter(l)
 

@@ -131,8 +131,8 @@ def import_shapefile_to_workspace(exit_on_success=False):
     Log.info(f'Exported correctly to \'{ws}\' nodes.shp and edges.shp\n')
     Log.info('PLEASE ADD TO \'{}\' ELEVATION '
              'INFORMATION !'.format(os.path.join(ws, 'nodes.shp')))
-    Log.info('(Open with QGIS the node.shp and a dem.tif')
-    Log.info('then with Point Sampling Tool Plugin create a new node.shp)')
+    Log.info('(Open with QGIS the nodes.shp and a dem.tif')
+    Log.info('then with Point Sampling Tool Plugin create a new nodes.shp)')
     if exit_on_success:
         raise SystemExit(0)
 

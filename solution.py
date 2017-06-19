@@ -366,11 +366,11 @@ class Route(object):
         """
         # if missing both arguments apply over self ones
         if paths is None and batteries is None:
-            IO.Log.debug('solution.is_feasible() applyed over self')
+            IO.Log.debug('solution.is_feasible() applied over self')
             paths = copy.copy(self._paths)
             batteries = copy.copy(self._batteries)
         elif paths is not None and batteries is not None:
-            IO.Log.debug('solution.is_feasible() applyed over given args')
+            IO.Log.debug('solution.is_feasible() applied over given args')
         else:
             raise ValueError('Please set either both or none of the arguments '
                              'in solution.is_feasible() method')

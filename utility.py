@@ -81,7 +81,6 @@ class CLI(object):
         'REQUIREMENTS: Python 3 (>= 3.6)\n'                                   \
         '              Graphviz     http://www.graphviz.org\n'                \
         '                           https://pypi.python.org/pypi/graphviz\n'  \
-        '              Matplotlib   https://matplotlib.org\n'                 \
         '              Networkx     https://networkx.github.io\n'             \
         '              PyYAML       http://pyyaml.org/wiki/PyYAML\n'
 

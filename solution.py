@@ -178,6 +178,7 @@ class Route(object):
 
         # if a station is reached recharge the battery
         if dest_node[2] == 'station':
+            IO.Log.debug(f'Charging battery in station {dest_node}')
             batt.recharge()
 
     def insert(self, node, pos):
@@ -594,7 +595,9 @@ class Battery(object):
             raise InsufficientBatteryException('Battery capacity is not '
                                                'enough to satisfy requested '
                                                'amount of energy')
+        IO.Log.debug(f'Battery energy before charge: {self.charge}')
         self.charge += asked_energy
+        IO.Log.debug(f'Battery energy after charge: {self.charge}')
         return asked_energy / self._charge_rate
 
     def recharge(self, percentage=0.8):

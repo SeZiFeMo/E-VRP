@@ -6,28 +6,31 @@ at University of Modena and Reggio Emilia.
 
 # Usage
 ```
-e-vrp.py [-h] [-3] [-a tag] [-c] [-d] [-e dir] [-i file.shp]
+usage: e-vrp.py [-h] [-3] [-a tag] [-c] [-d] [-e dir] [-i file.shp]
                 [-s file.yaml] [-t sec] [-q | -v] [-w dir]
 
-E-VRP is a project about the routing of a fleet of electrical vehicles.
-
 optional arguments:
-  -h, --help            show this help message and exit
-  -3, --3-opt           include 3-opt neighborhood in VNS metaheuristic (can lead to greater computation time). Default=False)
-  -a tag, --altitude tag
-                        tag describing the elevation of nodes in node.shp (default=ASTGTM2_de)
-  -c, --csv-solution    create csv file with solution (default=False)
-  -d, --draw-svg        generate svg images of both heuristic and metaheuristic solutions (default=False)
-  -e dir, --export dir  export to directory a shapefile representation of the problem to solve
-  -i file.shp, --import file.shp
-                        import shapefile to workspace
-  -s file.yaml, --solve file.yaml
-                        solve the problem described in file (default=problem.yaml)
-  -t sec, --time sec    VNS time limit (maximum seconds of computation (default=60)
-  -q, --quiet           set logging to WARNING, ERROR or CRITICAL (-q|-qq|-qqq)
-  -v, --verbose         set logging to DEBUG (default level is INFO)
-  -w dir, --workspace dir
-                        directory with edges.shp and node.shp (with elevation information)
+  -h, --help                      show this help message and exit
+  -3, --3-opt                     include 3-opt neighborhood in VNS
+                                  metaheuristic (can lead to greater
+                                  computation time, default=False)
+  -a tag, --altitude tag          tag describing the elevation of nodes in
+                                  node.shp (default=ASTGTM2_de)
+  -c, --csv-solution              create csv file with solution (default=False)
+  -d, --draw-svg                  generate svg images of both heuristic and
+                                  metaheuristic solutions (default=False)
+  -e dir, --export dir            export to directory a shapefile
+                                  representation of the problem to solve
+  -i file.shp, --import file.shp  import shapefile to workspace
+  -s file.yaml, --solve file.yaml solve the problem described in file
+                                  (default=problem.yaml)
+  -t sec, --time sec              VNS time limit maximum seconds of computation
+                                  (default=300)
+  -q, --quiet                     set logging to WARNING, ERROR or CRITICAL
+                                  (-q|-qq|-qqq)
+  -v, --verbose                   set logging to DEBUG (default level is INFO)
+  -w dir, --workspace dir         directory with edges.shp and node.shp
+                                  (with elevation information)
 ```
 
 Currently, E-VRP works in two stages: a preparatory stage where one can import a shapefile and add the altitude informations (the informations from this stage are saved in a specific folder called _workspace_ and a working stage where E-VRP solves the optimization problem on a workspace).
@@ -56,7 +59,7 @@ All options except for ```-e dir, --export dir``` and ```-i file.shp, --import``
 ### Examples
 
 ```./e-vrp.py -w workspace```
-This solves the problem in ```problem.yaml```, stopping the computation after a maximum of 60 seconds.
+This solves the problem in ```problem.yaml```, stopping the computation after a maximum of 300 seconds.
 
 ```./e-vrp.py -w workspace -t 600```
 Solve ```problem.yaml``` within a maximum of ten minutes
@@ -76,6 +79,5 @@ file for details.
 
 # Requirements
 * [Python 3](https://www.python.org) (>= 3.6)
-* [Matplotlib](https://matplotlib.org)
 * [Networkx](https://networkx.github.io)
 * [PyYAML](http://pyyaml.org/wiki/PyYAML)

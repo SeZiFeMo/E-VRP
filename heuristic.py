@@ -312,6 +312,7 @@ def metaheuristic(initial_solution, max_iter=10**3):
        Return the best solution found after max_iter or maximum time exceeded.
     """
     actual_solution = copy.deepcopy(initial_solution)
+    best_solution = copy.deepcopy(initial_solution)
     vns_it = 0
     best_it = 0
     t0 = time.time()
@@ -324,7 +325,7 @@ def metaheuristic(initial_solution, max_iter=10**3):
         # explore each available neighborhood
         for k, neighborhood_generator in enumerate(neighborhoods.values()):
             # explore each solution in the neighborhood
-            sol = shake(actual_solution, k)
+            sol = shake(actual_solution, k, neighborhood_generator)
             sol = local_search(sol, neighborhood_generator)
             num_explored_solutions += sol[1]
             if sol[0] is not None:
@@ -332,6 +333,10 @@ def metaheuristic(initial_solution, max_iter=10**3):
                 actual_solution = sol[0]
                 best_it = vns_it
                 break
+        if actual_solution.time < best_solution.time:
+            best_solution = actual_solution
+        else:
+            actual_solution = best_solution
         if vns_it >= best_it + 3:
             break
 
@@ -344,11 +349,11 @@ def metaheuristic(initial_solution, max_iter=10**3):
     IO.Log.info(f'{num_explored_solutions:>8}     explored sol.')
     return actual_solution
 
-def shake(sol, k):
+def shake(sol, k, neighborhood):
     """Make k random feasible move moves on the given solution."""
     for i in range(k):
         try:
-            sol = move_neighbors(sol).__next__()
+            sol = neighborhood(sol).__next__()
         except StopIteration:
             IO.Log.debug(f'Stopped after {i} shake iterations')
     return sol
